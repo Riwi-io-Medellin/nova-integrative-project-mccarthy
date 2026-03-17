@@ -11,10 +11,9 @@ const pool = mysql.createPool({
   connectionLimit:    10,
   queueLimit:         0,
   timezone:           '-05:00',
+  // ── Mantiene las conexiones vivas con pings TCP ──────
+  enableKeepAlive:       true,
+  keepAliveInitialDelay: 10000, // primer ping a los 10 segundos
 });
-
-pool.getConnection()
-  .then(conn => { conn.release(); })
-  .catch(() => {});
 
 module.exports = pool;
