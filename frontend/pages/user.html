@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mis Solicitudes — NOVA</title>
+  <link rel="icon" href="../assets/img/logo_oscuro_SF.png" type="image/png">
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <style>
+    /* ── Layout ─────────────────────────────────────── */
+    .page-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    @media(max-width: 768px) { .page-grid { grid-template-columns: 1fr; } }
+
+    /* ── Form card ───────────────────────────────────── */
+    .form-card { background: var(--surface); border-radius: 20px; padding: 28px; border: 1px solid var(--border); }
+    .form-card h2 { margin-bottom: 4px; font-size: 1.25rem; }
+    .form-card .subtitle { color: var(--text3); font-size: .85rem; margin-bottom: 24px; }
+
+    /* ── Acordeón tipo solicitud ─────────────────────── */
+    .accordion-select {
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .accordion-trigger {
+      width: 100%; display: flex; align-items: center; justify-content: space-between;
+      padding: 13px 16px; background: var(--surface); border: none; cursor: pointer;
+      font-size: .9rem; font-weight: 500; color: var(--text2);
+      transition: background var(--trans);
+    }
+    .accordion-trigger:hover { background: var(--hover); }
+    .accordion-trigger .acc-left { display:flex;align-items:center;gap:10px; }
+    .accordion-trigger .acc-left i { font-size:1.1rem;color:var(--primary); }
+    .accordion-trigger .acc-arrow { font-size:.8rem; transition: transform .2s; color:var(--text3); }
+    .accordion-trigger.open .acc-arrow { transform: rotate(180deg); }
+    .accordion-trigger.selected { background: var(--primary-glow); border-left: 3px solid var(--primary); color: var(--primary); }
+
+    .accordion-options {
+      display: none;
+      border-top: 1px solid var(--border);
+      background: var(--surface2);
+    }
+    .accordion-options.open { display: block; }
+    .acc-option {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 16px; cursor: pointer; font-size: .875rem;
+      color: var(--text2); transition: background var(--trans);
+      border-bottom: 1px solid var(--border);
+    }
+    .acc-option:last-child { border-bottom: none; }
+    .acc-option:hover { background: var(--hover); color: var(--primary); }
+    .acc-option i { font-size: 1rem; color: var(--text3); flex-shrink:0; }
+    .acc-option:hover i { color: var(--primary); }
+
+    /* ── History card ────────────────────────────────── */
+    .history-card { background: var(--surface); border-radius: 20px; border: 1px solid var(--border); overflow:hidden; }
+    .history-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .history-header h3 { margin: 0; font-size: 1rem; }
+
+    .nov-item {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background var(--trans);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: start;
+    }
+    .nov-item:last-child { border-bottom: none; }
+    .nov-item:hover { background: var(--hover); }
+    .nov-item-reason { font-weight: 600; color: var(--text); font-size: .9rem; }
+    .nov-item-date   { font-size: .8rem; color: var(--text3); margin-top: 2px; }
+    .nov-empty { padding: 48px 24px; text-align: center; color: var(--text3); }
+    .nov-empty i { font-size: 2.5rem; display:block; margin-bottom: 12px; opacity: .4; }
+
+    /* ── Navbar ──────────────────────────────────────── */
+    .user-nav {
+      background: var(--nav-bg);
+      border-bottom: 1px solid var(--border);
+      height: 64px;
+      display: flex; align-items: center; padding: 0 24px;
+      gap: 16px;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .user-nav .brand { font-family:'Outfit',sans-serif; font-weight:800; font-size:1.15rem; color:var(--primary); display:flex; align-items:center; gap:10px; }
+    .user-nav .brand img { height: 32px; }
+
+    .profile-menu { position:relative; }
+    .profile-dropdown {
+      position:absolute; right:0; top:calc(100%+8px);
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:12px; box-shadow:var(--shadow-lg);
+      min-width:200px; z-index:200; padding:8px;
+      display:none;
+    }
+    .profile-dropdown.open { display:block; }
+    .profile-dropdown a, .profile-dropdown button {
+      display:flex; align-items:center; gap:10px;
+      padding: 8px 12px; border-radius:8px;
+      color:var(--text2); font-size:.875rem; font-weight:500;
+      width:100%; text-align:left; background:none; border:none; cursor:pointer;
+      transition:all var(--trans);
+    }
+    .profile-dropdown a:hover, .profile-dropdown button:hover { background:var(--hover); color:var(--text); }
+  </style>
+</head>
+<body>
+
+<!-- ── Navbar ─────────────────────────────────────── -->
+<nav class="user-nav">
+  <div class="brand">
+    <img src="../assets/img/logo_oscuro_SF.png" alt="Nova" id="nav-logo">
+    <span>NOVA</span>
+  </div>
+  <span style="flex:1"></span>
+
+  <div class="theme-toggle">
+    <button class="theme-btn" data-theme="light" onclick="setTheme('light')">☀️</button>
+    <button class="theme-btn" data-theme="dark"  onclick="setTheme('dark')">🌙</button>
+  </div>
+
+  <div class="profile-menu">
+    <div class="user-avatar" id="topbar-avatar" onclick="toggleProfileMenu()" style="cursor:pointer"></div>
+    <div class="profile-dropdown" id="profile-dropdown">
+      <div style="padding:12px;border-bottom:1px solid var(--border);margin-bottom:4px">
+        <div style="font-weight:600;font-size:.9rem" id="dd-name"></div>
+        <div style="font-size:.78rem;color:var(--text3)" id="dd-email"></div>
+      </div>
+      <button onclick="Auth.logout()"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Page ───────────────────────────────────────── -->
+<div style="padding:28px">
+  <div style="max-width:1100px;margin:0 auto 24px">
+    <h1 style="font-size:1.5rem;margin-bottom:4px">Mis Solicitudes</h1>
+    <p style="color:var(--text3)">Reporta ausencias, incapacidades y solicitudes especiales</p>
+  </div>
+
+  <div class="page-grid">
+
+    <!-- ── Form ────────────────────────────────────── -->
+    <div class="form-card">
+      <h2>Nueva solicitud</h2>
+      <p class="subtitle">Selecciona el tipo de novedad y completa el formulario</p>
+
+      <!-- Tipo de solicitud (acordeón) -->
+      <div class="form-group">
+        <label class="form-label">Tipo de solicitud *</label>
+        <div class="accordion-select" id="accordion-select">
+          <button type="button" class="accordion-trigger" id="acc-trigger" onclick="toggleAccordion()">
+            <span class="acc-left">
+              <i class="bi bi-list-ul" id="acc-icon"></i>
+              <span id="acc-label">Selecciona el tipo de solicitud</span>
+            </span>
+            <i class="bi bi-chevron-down acc-arrow" id="acc-arrow"></i>
+          </button>
+          <div class="accordion-options" id="acc-options">
+            <div class="acc-option" data-v="Incapacidad médica"        data-icon="bi-hospital"           onclick="selectReason(this)"><i class="bi bi-hospital"></i>Incapacidad médica</div>
+            <div class="acc-option" data-v="Calamidad doméstica"       data-icon="bi-house-exclamation"  onclick="selectReason(this)"><i class="bi bi-house-exclamation"></i>Calamidad doméstica</div>
+            <div class="acc-option" data-v="Solicitud de permiso"      data-icon="bi-calendar-check"     onclick="selectReason(this)"><i class="bi bi-calendar-check"></i>Solicitud de permiso</div>
+            <div class="acc-option" data-v="Solicitud de egresado"     data-icon="bi-mortarboard"        onclick="selectReason(this)"><i class="bi bi-mortarboard"></i>Solicitud de egresado</div>
+            <div class="acc-option" data-v="Constancia de entrenamiento" data-icon="bi-award"            onclick="selectReason(this)"><i class="bi bi-award"></i>Constancia de entrenamiento</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fecha -->
+      <div class="form-group">
+        <label class="form-label">Fecha *</label>
+        <input type="date" class="form-control" id="f-date">
+      </div>
+
+      <!-- Descripción -->
+      <div class="form-group">
+        <label class="form-label">Descripción de la solicitud</label>
+        <textarea class="form-control" id="f-desc" rows="4" placeholder="Describe brevemente tu situación..."></textarea>
+      </div>
+
+      <!-- Adjunto -->
+      <div class="form-group">
+        <label class="form-label">Documento adjunto (opcional)</label>
+        <div class="dropzone" id="dropzone" onclick="document.getElementById('f-file').click()" ondragover="handleDragOver(event)" ondrop="handleDrop(event)" ondragleave="this.classList.remove('drag-over')">
+          <i class="bi bi-cloud-upload"></i>
+          <div>Arrastra tu archivo aquí o haz clic para seleccionar</div>
+          <div style="font-size:.78rem;margin-top:4px">PDF, JPG, PNG, WebP — máx. 10 MB</div>
+        </div>
+        <input type="file" id="f-file" style="display:none" accept="image/*,application/pdf" onchange="handleFileSelect(this)">
+        <div id="file-preview" style="display:none;margin-top:10px"></div>
+      </div>
+
+      <div id="form-error" style="color:var(--danger);font-size:.85rem;margin-bottom:10px;display:none"></div>
+
+      <button class="btn btn-primary" style="width:100%;justify-content:center" id="btn-submit" onclick="submitNovedad()">
+        <span id="submit-text"><i class="bi bi-send"></i> Enviar solicitud</span>
+        <span id="submit-spinner" class="spinner" style="display:none;width:16px;height:16px;border-width:2px;border-color:rgba(255,255,255,.4);border-top-color:#fff"></span>
+      </button>
+    </div>
+
+    <!-- ── History ──────────────────────────────────── -->
+    <div class="history-card">
+      <div class="history-header">
+        <h3><i class="bi bi-clock-history" style="color:var(--primary);margin-right:6px"></i>Mis solicitudes</h3>
+        <button class="btn btn-ghost btn-sm" onclick="loadHistory()"><i class="bi bi-arrow-clockwise"></i></button>
+      </div>
+      <div id="history-list">
+        <div class="nov-empty"><div class="spinner" style="margin:0 auto"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Detalle solicitud ───────────────────── -->
+<div class="modal-overlay" id="modal-detail">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3>Detalle de solicitud</h3>
+      <button class="modal-close" onclick="closeModal('modal-detail')"><i class="bi bi-x"></i></button>
+    </div>
+    <div class="modal-body" id="detail-content"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-detail')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="../js/config.js"></script>
+<script src="../js/utils.js"></script>
+<script>
+  let selectedReason = '';
+  let selectedFile   = null;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
+    const user = Auth.requireAuth();
+    if (!user) return;
+    renderTopbarUser();
+    updateLogo();
+    const _hoy = new Date();
+    document.getElementById('f-date').value =
+      _hoy.getFullYear() + '-' +
+      String(_hoy.getMonth() + 1).padStart(2, '0') + '-' +
+      String(_hoy.getDate()).padStart(2, '0');
+    const name = [user.nombre, user.apellido].filter(Boolean).join(' ');
+    document.getElementById('dd-name').textContent  = name;
+    document.getElementById('dd-email').textContent = user.correo||'';
+    loadHistory();
+  });
+
+  function updateLogo() {
+    const isDark = document.body.classList.contains('dark');
+    document.getElementById('nav-logo').src = isDark
+      ? '../assets/img/logo_Oscuro-removebg-preview.png'
+      : '../assets/img/logo_claro-removebg-preview.png';
+  }
+  const _setTheme = setTheme;
+  window.setTheme = function(t) { _setTheme(t); updateLogo(); };
+
+  function toggleProfileMenu() {
+    document.getElementById('profile-dropdown').classList.toggle('open');
+  }
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.profile-menu'))
+      document.getElementById('profile-dropdown').classList.remove('open');
+  });
+
+  function toggleAccordion() {
+    const trigger  = document.getElementById('acc-trigger');
+    const options  = document.getElementById('acc-options');
+    const arrow    = document.getElementById('acc-arrow');
+    const isOpen   = options.classList.contains('open');
+    options.classList.toggle('open', !isOpen);
+    trigger.classList.toggle('open', !isOpen);
+    arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
+  }
+
+  function selectReason(el) {
+    selectedReason = el.dataset.v;
+    const icon = el.dataset.icon || 'bi-list-ul';
+    document.getElementById('acc-label').textContent = selectedReason;
+    document.getElementById('acc-icon').className    = `bi ${icon}`;
+    const trigger = document.getElementById('acc-trigger');
+    trigger.classList.add('selected');
+    trigger.classList.remove('open');
+    document.getElementById('acc-options').classList.remove('open');
+    document.getElementById('acc-arrow').style.transform = '';
+  }
+
+  function handleDragOver(e) { e.preventDefault(); document.getElementById('dropzone').classList.add('drag-over'); }
+  function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('dropzone').classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) setFile(file);
+  }
+  function handleFileSelect(input) { if (input.files[0]) setFile(input.files[0]); }
+  function setFile(file) {
+    selectedFile = file;
+    const preview = document.getElementById('file-preview');
+    preview.style.display = '';
+    preview.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--hover);border-radius:8px;border:1px solid var(--border)">
+        <i class="bi bi-${file.type.includes('pdf')?'file-pdf':'image'}" style="font-size:1.3rem;color:var(--primary)"></i>
+        <div style="flex:1;overflow:hidden">
+          <div style="font-size:.85rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${file.name}</div>
+          <div style="font-size:.75rem;color:var(--text3)">${(file.size/1024/1024).toFixed(2)} MB</div>
+        </div>
+        <button onclick="removeFile()" style="border:none;background:none;cursor:pointer;color:var(--text3);font-size:1.1rem">✕</button>
+      </div>`;
+  }
+  function removeFile() {
+    selectedFile = null;
+    document.getElementById('f-file').value = '';
+    document.getElementById('file-preview').style.display = 'none';
+    document.getElementById('file-preview').innerHTML = '';
+  }
+
+  async function submitNovedad() {
+    const errEl = document.getElementById('form-error');
+    errEl.style.display = 'none';
+
+    if (!selectedReason) { errEl.textContent='Selecciona un tipo de solicitud'; errEl.style.display=''; return; }
+    const date = document.getElementById('f-date').value;
+    if (!date) { errEl.textContent='Selecciona la fecha de ausencia'; errEl.style.display=''; return; }
+
+    const fd = new FormData();
+    fd.append('reason', selectedReason);
+    fd.append('date_of_absence', date);
+    const desc = document.getElementById('f-desc').value.trim();
+    if (desc) fd.append('excuse_text', desc);
+    if (selectedFile) fd.append('excuse', selectedFile);
+
+    document.getElementById('btn-submit').disabled = true;
+    document.getElementById('submit-text').style.display = 'none';
+    document.getElementById('submit-spinner').style.display = '';
+
+    try {
+      const r = await http.postForm('/novedades', fd);
+      const data = await r.json();
+      if (!r.ok) { errEl.textContent = data.message||'Error al enviar'; errEl.style.display=''; return; }
+      showToast('Solicitud enviada exitosamente. Recibirás un correo de confirmación.', 'success');
+      // Reset form
+      selectedReason = '';
+      document.getElementById('acc-label').textContent = 'Selecciona el tipo de solicitud';
+      document.getElementById('acc-icon').className    = 'bi bi-list-ul';
+      document.getElementById('acc-trigger').classList.remove('selected','open');
+      document.getElementById('acc-options').classList.remove('open');
+      document.getElementById('f-date').value = (() => {
+        const d = new Date();
+        return d.getFullYear() + '-' +
+          String(d.getMonth() + 1).padStart(2, '0') + '-' +
+          String(d.getDate()).padStart(2, '0');
+      })();
+      document.getElementById('f-desc').value = '';
+      removeFile();
+      loadHistory();
+    } catch { errEl.textContent='Error de conexión'; errEl.style.display=''; }
+    finally {
+      document.getElementById('btn-submit').disabled = false;
+      document.getElementById('submit-text').style.display = '';
+      document.getElementById('submit-spinner').style.display = 'none';
+    }
+  }
+
+  async function loadHistory() {
+    document.getElementById('history-list').innerHTML = `<div class="nov-empty"><div class="spinner" style="margin:0 auto"></div></div>`;
+    try {
+      const r = await http.get('/novedades/mias');
+      const json = await r.json();
+      const items = json.data || [];
+      if (!items.length) {
+        document.getElementById('history-list').innerHTML = `
+          <div class="nov-empty">
+            <i class="bi bi-inbox"></i>
+            <p>Aún no tienes solicitudes registradas</p>
+          </div>`;
+        return;
+      }
+      document.getElementById('history-list').innerHTML = items.map(n => `
+        <div class="nov-item" onclick="viewDetail(${n.id})">
+          <div>
+            <div class="nov-item-reason">${n.reason}</div>
+            <div class="nov-item-date"><i class="bi bi-calendar3" style="margin-right:4px"></i>${fmt.date(n.date_of_absence)}</div>
+          </div>
+          <div>${fmt.statusBadge(n.status)}</div>
+        </div>`).join('');
+    } catch {
+      document.getElementById('history-list').innerHTML = `<div class="nov-empty" style="color:var(--danger)">Error al cargar historial</div>`;
+    }
+  }
+
+  // store for detail view
+  let _novedades = [];
+  const _loadH = loadHistory;
+  window.loadHistory = async function() {
+    await _loadH();
+    // Also store for detail view
+    try {
+      const r = await http.get('/novedades/mias');
+      const json = await r.json();
+      _novedades = json.data || [];
+    } catch {}
+  };
+
+  function viewDetail(id) {
+    const n = _novedades.find(x => x.id === id);
+    if (!n) return;
+    document.getElementById('detail-content').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><div style="font-size:.78rem;color:var(--text3)">Tipo</div><div style="font-weight:600">${n.reason}</div></div>
+        <div><div style="font-size:.78rem;color:var(--text3)">Fecha de ausencia</div><div style="font-weight:600">${fmt.date(n.date_of_absence)}</div></div>
+        <div><div style="font-size:.78rem;color:var(--text3)">Estado</div>${fmt.statusBadge(n.status)}</div>
+        <div><div style="font-size:.78rem;color:var(--text3)">Registrado</div><div>${fmt.date(n.created_at)}</div></div>
+        ${n.excuse_text ? `<div style="grid-column:1/-1"><div style="font-size:.78rem;color:var(--text3)">Descripción</div><div>${n.excuse_text}</div></div>` : ''}
+        ${n.observacion ? `<div style="grid-column:1/-1;padding:12px;border-radius:8px;${n.status==='rejected'?'background:#fee2e2;color:#991b1b':'background:#d1fae5;color:#065f46'}"><strong>Respuesta del profesional:</strong> ${n.observacion}</div>` : ''}
+        ${n.excuse_url ? `<div style="grid-column:1/-1"><div style="font-size:.78rem;color:var(--text3);margin-bottom:8px">Adjunto</div><a href="${n.excuse_url}" target="_blank" class="btn btn-ghost btn-sm"><i class="bi bi-file-earmark"></i> Ver adjunto</a></div>` : ''}
+      </div>`;
+    openModal('modal-detail');
+  }
+</script>
+</body>
+</html>

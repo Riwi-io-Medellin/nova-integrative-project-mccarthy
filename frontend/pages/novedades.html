@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Novedades — NOVA</title>
+  <link rel="icon" href="../assets/img/logo_oscuro_SF.png" type="image/png">
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <style>
+    .filter-tabs { display:flex; gap:8px; flex-wrap:wrap; }
+    .ftab {
+      padding:6px 16px; border-radius:999px; font-size:.85rem; font-weight:600;
+      border: 1.5px solid var(--border); background: var(--surface);
+      color: var(--text2); cursor:pointer; transition:all var(--trans);
+    }
+    .ftab:hover  { border-color:var(--primary); color:var(--primary); }
+    .ftab.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+    .ftab .cnt   { background:rgba(255,255,255,.25); padding:1px 7px; border-radius:999px; margin-left:4px; font-size:.75rem; }
+    .ftab:not(.active) .cnt { background:var(--hover); color:var(--text3); }
+
+    .prio-dot { width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px; }
+    .prio-Alta   { background:var(--danger); }
+    .prio-Media  { background:var(--warning); }
+    .prio-Baja   { background:var(--info); }
+
+    .act-btn { padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text2); cursor:pointer; font-size:.8rem; transition:all var(--trans); display:inline-flex;align-items:center;gap:4px; }
+    .act-btn:hover { border-color:var(--primary); color:var(--primary); }
+    .act-btn.red:hover { border-color:var(--danger); color:var(--danger); }
+    .act-btn:disabled { opacity:.5; cursor:not-allowed; pointer-events:none; }
+
+    .detail-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0; }
+    .detail-item label { font-size:.78rem;color:var(--text3);display:block;margin-bottom:2px; }
+    .detail-item span  { font-size:.9rem;color:var(--text);font-weight:500; }
+
+    #ai-panel { margin-top:16px; }
+    .loading-ai { display:flex;align-items:center;gap:10px;color:var(--text3);font-size:.9rem; }
+
+    /* ── Btn spinner ── */
+    .btn-spinner { display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0; }
+    .btn-spinner.dark { border-color:rgba(0,0,0,.15);border-top-color:var(--text2); }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    button[disabled], .btn[disabled] { opacity:.6; cursor:not-allowed; pointer-events:none; }
+  </style>
+</head>
+<body>
+
+<!-- ── Sidebar ─────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <img src="../assets/img/logo_oscuro_SF.png" alt="Nova" id="logo-img">
+    <span>NOVA</span>
+  </div>
+  <nav class="sidebar-nav">
+    <a class="nav-link active" href="novedades.html"><i class="bi bi-clipboard-check"></i><span class="nav-label">Novedades</span><span class="nav-badge" id="badge-pending" style="display:none">0</span></a>
+    <a class="nav-link" href="users.html"><i class="bi bi-people"></i><span class="nav-label">Usuarios</span><span class="nav-badge" id="badge-inactivos" style="display:none">0</span></a>
+    <div style="height:1px;background:var(--border);margin:8px 0"></div>
+    <a class="nav-link" href="config.html"><i class="bi bi-gear"></i><span class="nav-label">Configuración</span></a>
+    <a class="nav-link" href="audit.html"><i class="bi bi-journal-text"></i><span class="nav-label">Auditoría</span></a>
+  </nav>
+  <div style="padding:12px 16px;border-top:1px solid var(--border)">
+    <div class="theme-toggle" style="margin-bottom:10px">
+      <button class="theme-btn" data-theme="light" onclick="setTheme('light')">☀️</button>
+      <button class="theme-btn" data-theme="dark"  onclick="setTheme('dark')">🌙</button>
+    </div>
+    <button class="nav-link" onclick="Auth.logout()" style="color:var(--danger)">
+      <i class="bi bi-box-arrow-right"></i><span class="nav-label">Cerrar sesión</span>
+    </button>
+  </div>
+</aside>
+
+<!-- ── Main ───────────────────────────────────────── -->
+<div class="main-layout" id="main-layout">
+  <header class="topbar">
+    <button onclick="toggleSidebar()" class="btn-icon btn-ghost"><i class="bi bi-list" style="font-size:1.2rem"></i></button>
+    <span class="topbar-title">Panel de Novedades</span>
+    <span id="topbar-user" style="font-size:.85rem;color:var(--text3)"></span>
+    <div class="user-avatar" id="topbar-avatar"></div>
+  </header>
+
+  <main class="page-content">
+
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px">
+      <div class="stat-card"><div class="stat-icon purple"><i class="bi bi-clipboard-list"></i></div><div><div class="stat-value" id="s-total">—</div><div class="stat-label">Total novedades</div></div></div>
+      <div class="stat-card"><div class="stat-icon yellow"><i class="bi bi-hourglass-split"></i></div><div><div class="stat-value" id="s-pending">—</div><div class="stat-label">Pendientes</div></div></div>
+      <div class="stat-card"><div class="stat-icon green"><i class="bi bi-check-circle"></i></div><div><div class="stat-value" id="s-accepted">—</div><div class="stat-label">Aprobadas</div></div></div>
+      <div class="stat-card"><div class="stat-icon red"><i class="bi bi-x-circle"></i></div><div><div class="stat-value" id="s-rejected">—</div><div class="stat-label">Rechazadas</div></div></div>
+    </div>
+
+    <!-- Filters + Search -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-body" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:16px 20px">
+        <div class="filter-tabs">
+          <button class="ftab active" data-filter="all"      onclick="setFilter('all',this)">Todas <span class="cnt" id="cnt-all">0</span></button>
+          <button class="ftab"        data-filter="pending"  onclick="setFilter('pending',this)">Pendientes <span class="cnt" id="cnt-pending">0</span></button>
+          <button class="ftab"        data-filter="accepted" onclick="setFilter('accepted',this)">Aprobadas <span class="cnt" id="cnt-accepted">0</span></button>
+          <button class="ftab"        data-filter="rejected" onclick="setFilter('rejected',this)">Rechazadas <span class="cnt" id="cnt-rejected">0</span></button>
+        </div>
+        <div style="flex:1;min-width:200px;position:relative">
+          <i class="bi bi-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3)"></i>
+          <input type="text" class="form-control" id="search-input" placeholder="Buscar por nombre, correo, motivo..." style="padding-left:36px" oninput="renderTable()">
+        </div>
+        <button class="btn btn-ghost btn-sm" id="btn-refresh" onclick="refreshAll()">
+          <i class="bi bi-arrow-clockwise"></i> Actualizar
+        </button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Usuario</th>
+              <th>Tipo de solicitud</th>
+              <th>Fecha ausencia</th>
+              <th>Prioridad</th>
+              <th>Estado</th>
+              <th>Registrado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── Modal: Ver novedad ─────────────────────────── -->
+<div class="modal-overlay" id="modal-detail">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <h3><i class="bi bi-clipboard-check" style="color:var(--primary);margin-right:8px"></i>Detalle de Novedad</h3>
+      <button class="modal-close" onclick="closeModal('modal-detail')"><i class="bi bi-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-grid" id="detail-content"></div>
+      <div id="detail-excuse"></div>
+      <div id="ai-panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <h4 style="font-size:.95rem;margin:0">Analisis IA</h4>
+          <button class="btn btn-ghost btn-sm" id="btn-ai" onclick="runAI()">
+            <span id="ai-btn-text"><i class="bi bi-robot"></i> Analizar</span>
+            <span id="ai-btn-spinner" style="display:none" class="btn-spinner dark"></span>
+          </button>
+        </div>
+        <div id="ai-result"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-detail')">Cerrar</button>
+      <button class="btn btn-success btn-sm" id="btn-approve" onclick="changeStatus('accepted')">
+        <span id="approve-text"><i class="bi bi-check-lg"></i> Aprobar</span>
+        <span id="approve-spinner" style="display:none" class="btn-spinner"></span>
+      </button>
+      <button class="btn btn-danger btn-sm" id="btn-reject" onclick="openRejectModal()">
+        <i class="bi bi-x-lg"></i> Rechazar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Cambiar estado ──────────────────────── -->
+<div class="modal-overlay" id="modal-status">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>Cambiar estado</h3>
+      <button class="modal-close" onclick="closeModal('modal-status')"><i class="bi bi-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Estado</label>
+        <select class="form-select" id="new-status">
+          <option value="pending">Pendiente</option>
+          <option value="accepted">Aprobar</option>
+          <option value="rejected">Rechazar</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Observación (opcional)</label>
+        <textarea class="form-control" id="status-obs" rows="3" placeholder="Motivo del cambio de estado..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btn-cancel-status" onclick="closeModal('modal-status')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-submit-status" onclick="submitStatus()">
+        <span id="status-btn-text"><i class="bi bi-check-lg"></i> Guardar</span>
+        <span id="status-btn-spinner" style="display:none" class="btn-spinner"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Rechazar ────────────────────────────── -->
+<div class="modal-overlay" id="modal-reject">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3 style="color:var(--danger)"><i class="bi bi-x-circle"></i> Rechazar solicitud</h3>
+      <button class="modal-close" onclick="closeModal('modal-reject')"><i class="bi bi-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-bottom:16px">Por favor indica el motivo del rechazo para notificar al usuario.</p>
+      <div class="form-group">
+        <label class="form-label">Motivo del rechazo</label>
+        <textarea class="form-control" id="reject-obs" rows="3" placeholder="Indica el motivo..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btn-cancel-reject" onclick="closeModal('modal-reject')">Cancelar</button>
+      <button class="btn btn-danger" id="btn-confirm-reject" onclick="changeStatus('rejected')">
+        <span id="reject-btn-text"><i class="bi bi-x-lg"></i> Rechazar</span>
+        <span id="reject-btn-spinner" style="display:none" class="btn-spinner"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Confirm delete ─────────────────────────────── -->
+<div class="modal-overlay" id="modal-del">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-body" style="text-align:center;padding:32px">
+      <div style="font-size:3rem;margin-bottom:16px">🗑️</div>
+      <h3 style="margin-bottom:8px">¿Eliminar novedad?</h3>
+      <p>Esta acción no se puede deshacer.</p>
+    </div>
+    <div class="modal-footer" style="justify-content:center">
+      <button class="btn btn-ghost" id="btn-cancel-del" onclick="closeModal('modal-del')">Cancelar</button>
+      <button class="btn btn-danger" id="btn-confirm-del" onclick="confirmDelete()">
+        <span id="del-btn-text"><i class="bi bi-trash3"></i> Sí, eliminar</span>
+        <span id="del-btn-spinner" style="display:none" class="btn-spinner"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="../js/config.js"></script>
+<script src="../js/utils.js"></script>
+<script>
+  let novedades = [], current = null, deleteId = null;
+  let currentFilter = 'all';
+
+  // ── Helpers loading ───────────────────────────────
+  function setBtnLoading(btnId, textId, spinnerId, loading) {
+    const btn = document.getElementById(btnId);
+    const txt = document.getElementById(textId);
+    const sp  = document.getElementById(spinnerId);
+    if (btn) btn.disabled = loading;
+    if (txt) txt.style.display = loading ? 'none' : '';
+    if (sp)  sp.style.display  = loading ? ''     : 'none';
+  }
+
+  function setRefreshLoading(loading) {
+    const btn = document.getElementById('btn-refresh');
+    if (!btn) return;
+    btn.disabled = loading;
+    btn.innerHTML = loading
+      ? '<span class="btn-spinner dark" style="width:13px;height:13px;border-width:2px"></span> Actualizando...'
+      : '<i class="bi bi-arrow-clockwise"></i> Actualizar';
+  }
+
+  // ── Init ──────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
+    initSidebar();
+    const user = Auth.requireAdmin();
+    if (!user) return;
+    renderTopbarUser();
+    updateLogo();
+    loadNovedades();
+    loadStats();
+  });
+
+  function updateLogo() {
+    const isDark = document.body.classList.contains('dark');
+    document.getElementById('logo-img').src = isDark
+      ? '../assets/img/logo_Oscuro-removebg-preview.png'
+      : '../assets/img/logo_claro-removebg-preview.png';
+  }
+  const _setTheme = setTheme;
+  window.setTheme = function(t) { _setTheme(t); updateLogo(); };
+
+  async function refreshAll() {
+    setRefreshLoading(true);
+    try {
+      await Promise.all([loadNovedades(), loadStats()]);
+    } finally {
+      setRefreshLoading(false);
+    }
+  }
+
+  async function loadStats() {
+    try {
+      const r = await http.get('/novedades/stats');
+      const { data } = await r.json();
+      document.getElementById('s-total').textContent    = data.total;
+      document.getElementById('s-pending').textContent  = data.pending;
+      document.getElementById('s-accepted').textContent = data.accepted;
+      document.getElementById('s-rejected').textContent = data.rejected;
+      const badge = document.getElementById('badge-pending');
+      if (data.pending > 0) { badge.textContent = data.pending; badge.style.display = ''; }
+      else { badge.style.display = 'none'; }
+    } catch {}
+    try {
+      const r2 = await http.get('/users/stats');
+      const d2 = await r2.json();
+      const b2 = document.getElementById('badge-inactivos');
+      if (b2) { if (d2.inactivos > 0) { b2.textContent = d2.inactivos; b2.style.display = ''; } else { b2.style.display = 'none'; } }
+    } catch {}
+  }
+
+  async function loadNovedades() {
+    document.getElementById('tbody').innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px"><div style="display:flex;align-items:center;justify-content:center;gap:10px;color:var(--text3)"><div class="spinner"></div>Cargando novedades...</div></td></tr>`;
+    try {
+      const r = await http.get('/novedades');
+      const json = await r.json();
+      novedades = json.data || [];
+      updateCounts();
+      renderTable();
+      loadStats();
+    } catch (err) {
+      document.getElementById('tbody').innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--danger)">
+        <i class="bi bi-exclamation-triangle" style="font-size:1.5rem;display:block;margin-bottom:8px"></i>
+        Error al cargar: ${err.message}
+        <br><button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="loadNovedades()">Reintentar</button>
+      </td></tr>`;
+    }
+  }
+
+  function updateCounts() {
+    const c = { all: novedades.length, pending:0, accepted:0, rejected:0 };
+    novedades.forEach(n => { if(c[n.status]!==undefined) c[n.status]++; });
+    ['all','pending','accepted','rejected'].forEach(k => {
+      document.getElementById(`cnt-${k}`).textContent = c[k];
+    });
+  }
+
+  function setFilter(f, btn) {
+    currentFilter = f;
+    document.querySelectorAll('.ftab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderTable();
+  }
+
+  function renderTable() {
+    const q = document.getElementById('search-input').value.toLowerCase();
+    const rows = novedades.filter(n => {
+      if (currentFilter !== 'all' && n.status !== currentFilter) return false;
+      if (!q) return true;
+      return [n.nombre, n.apellido, n.correo, n.documento, n.reason].join(' ').toLowerCase().includes(q);
+    });
+
+    if (!rows.length) {
+      document.getElementById('tbody').innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text3)">Sin resultados</td></tr>`;
+      return;
+    }
+
+    document.getElementById('tbody').innerHTML = rows.map(n => `
+      <tr>
+        <td style="color:var(--text3);font-size:.8rem">#${n.id}</td>
+        <td>
+          <div style="font-weight:600;color:var(--text)">${n.nombre} ${n.apellido}</div>
+          <div style="font-size:.78rem;color:var(--text3)">${n.correo}</div>
+        </td>
+        <td style="max-width:180px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${n.reason}">${n.reason}</div></td>
+        <td>${fmt.date(n.date_of_absence)}</td>
+        <td><span class="prio-dot prio-${n.tipo_de_prioridad}"></span>${n.tipo_de_prioridad}</td>
+        <td>${fmt.statusBadge(n.status)}</td>
+        <td style="font-size:.8rem;color:var(--text3)">${fmt.date(n.created_at)}</td>
+        <td>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="act-btn" onclick="viewDetail(${n.id})"><i class="bi bi-eye"></i> Ver</button>
+            <button class="act-btn" onclick="openStatusModal(${n.id})"><i class="bi bi-pencil"></i> Estado</button>
+            <button class="act-btn red" onclick="askDelete(${n.id})"><i class="bi bi-trash3"></i></button>
+          </div>
+        </td>
+      </tr>`).join('');
+  }
+
+  async function viewDetail(id) {
+    current = novedades.find(n => Number(n.id) === Number(id));
+    if (!current) return;
+
+    document.getElementById('detail-content').innerHTML = `
+      <div class="detail-item"><label>Solicitante</label><span>${current.nombre} ${current.apellido}</span></div>
+      <div class="detail-item"><label>Correo</label><span>${current.correo}</span></div>
+      <div class="detail-item"><label>Documento</label><span>${current.documento}</span></div>
+      <div class="detail-item"><label>Fecha de ausencia</label><span>${fmt.date(current.date_of_absence)}</span></div>
+      <div class="detail-item" style="grid-column:1/-1"><label>Tipo de solicitud</label><span>${current.reason}</span></div>
+      <div class="detail-item"><label>Prioridad</label><span><span class="prio-dot prio-${current.tipo_de_prioridad}"></span>${current.tipo_de_prioridad}</span></div>
+      <div class="detail-item"><label>Estado</label><span>${fmt.statusBadge(current.status)}</span></div>
+      ${current.observacion ? `<div class="detail-item" style="grid-column:1/-1"><label>Observacion del profesional</label><span>${current.observacion}</span></div>` : ''}
+      <div class="detail-item"><label>Registrado</label><span>${fmt.time(current.created_at)}</span></div>
+      <div class="detail-item"><label>Actualizado</label><span>${fmt.time(current.updated_at)}</span></div>
+    `;
+
+    const excEl = document.getElementById('detail-excuse');
+    let excHtml = '';
+    if (current.excuse_text) {
+      excHtml += `<div style="margin-bottom:14px">
+        <label class="form-label">Descripcion del usuario</label>
+        <p style="background:var(--hover);padding:12px 16px;border-radius:8px;font-size:.9rem;margin:6px 0 0;color:var(--text2);line-height:1.55;border-left:3px solid var(--primary)">${current.excuse_text}</p>
+      </div>`;
+    }
+    if (current.excuse_url) {
+      const isPdf = current.excuse_url.toLowerCase().includes('.pdf');
+      excHtml += `<div style="margin-bottom:14px">
+        <label class="form-label">Documento adjunto</label>
+        ${isPdf
+          ? `<a href="${current.excuse_url}" target="_blank" class="btn btn-ghost btn-sm" style="margin-top:6px;display:inline-flex"><i class="bi bi-file-pdf"></i> Ver PDF</a>`
+          : `<div style="margin-top:8px"><img src="${current.excuse_url}" style="max-width:100%;border-radius:8px;border:1px solid var(--border)" alt="Adjunto"></div>`}
+      </div>`;
+    }
+    excEl.innerHTML = excHtml;
+
+    // Reset botones del modal
+    setBtnLoading('btn-approve','approve-text','approve-spinner', false);
+    document.getElementById('ai-result').innerHTML = '';
+    setBtnLoading('btn-ai','ai-btn-text','ai-btn-spinner', false);
+    document.getElementById('btn-approve').style.display = current.status === 'accepted' ? 'none' : '';
+    document.getElementById('btn-reject').style.display  = current.status === 'rejected'  ? 'none' : '';
+    openModal('modal-detail');
+  }
+
+  async function runAI() {
+    if (!current) return;
+    const el = document.getElementById('ai-result');
+    el.innerHTML = `<div class="loading-ai"><div class="spinner"></div>Analizando con IA...</div>`;
+    setBtnLoading('btn-ai','ai-btn-text','ai-btn-spinner', true);
+    try {
+      const r    = await http.get(`/novedades/${current.id}/ai`);
+      const json = await r.json();
+      if (!r.ok) { el.innerHTML = `<p style="color:var(--danger)">${json.message}</p>`; return; }
+
+      const a   = json.data.analysis;
+      const ctx = json.data.contexto || {};
+      const hist = ctx.historial || {};
+
+      const chips = [];
+      if (ctx.es_retroactiva)
+        chips.push(`<span style="background:#fee2e2;color:#991b1b;padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600">Solicitud retroactiva</span>`);
+      if (ctx.dias_anticipacion != null && !isNaN(ctx.dias_anticipacion) && ctx.dias_anticipacion >= 0)
+        chips.push(`<span style="background:#dbeafe;color:#1e40af;padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600">${ctx.dias_anticipacion}d de anticipacion</span>`);
+      if (ctx.dias_desde_hoy != null && !isNaN(ctx.dias_desde_hoy)) {
+        const label = ctx.dias_desde_hoy >= 0 ? `En ${ctx.dias_desde_hoy} dias` : `Hace ${Math.abs(ctx.dias_desde_hoy)} dias`;
+        chips.push(`<span style="background:var(--hover);color:var(--text2);padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600">${label}</span>`);
+      }
+      if (hist.total != null && !isNaN(hist.total))
+        chips.push(`<span style="background:var(--hover);color:var(--text2);padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:600">${hist.total} solicitudes previas · Aprobadas: ${hist.aceptadas} · Rechazadas: ${hist.rechazadas}</span>`);
+
+      el.innerHTML = `
+        <div class="ai-card">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
+            <div class="ai-rec ${a.recomendacion}">${a.recomendacion}</div>
+            <span style="font-size:.8rem;color:var(--text3)">Confianza: <strong>${a.confianza}/10</strong></span>
+          </div>
+          <div class="conf-bar"><div class="conf-fill" style="width:${a.confianza*10}%"></div></div>
+          ${chips.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px">${chips.join('')}</div>` : ''}
+          <p style="margin-top:12px;font-size:.875rem;color:var(--text2);line-height:1.55">${a.motivo}</p>
+          ${a.alertas?.length ? `
+            <div style="background:#fef3c7;border-left:3px solid var(--warning);border-radius:6px;padding:10px 14px;margin-top:10px">
+              <div style="font-size:.78rem;font-weight:700;color:#92400e;margin-bottom:4px">ALERTAS</div>
+              <ul style="margin:0;padding-left:18px;font-size:.8rem;color:#78350f">
+                ${a.alertas.map(x => `<li>${x}</li>`).join('')}
+              </ul>
+            </div>` : ''}
+          ${a.observacion_sugerida ? `
+            <div style="margin-top:12px;border:1px dashed var(--border2);border-radius:8px;padding:10px 14px;background:var(--surface2)">
+              <div style="font-size:.75rem;font-weight:700;color:var(--primary);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">
+                <span>OBSERVACION SUGERIDA</span>
+                <button onclick="copyObs(this)" data-text="${a.observacion_sugerida.replace(/"/g,'&quot;')}"
+                  style="font-size:.72rem;padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)">
+                  Copiar
+                </button>
+              </div>
+              <p style="margin:0;font-size:.82rem;color:var(--text2);font-style:italic">"${a.observacion_sugerida}"</p>
+            </div>` : ''}
+        </div>`;
+    } catch (err) {
+      el.innerHTML = `<p style="color:var(--danger)">Error: ${err.message}</p>`;
+    } finally {
+      setBtnLoading('btn-ai','ai-btn-text','ai-btn-spinner', false);
+    }
+  }
+
+  function copyObs(btn) {
+    const text = btn.dataset.text;
+    navigator.clipboard.writeText(text).then(() => {
+      const obsField = document.getElementById('status-obs');
+      if (obsField) obsField.value = text;
+      btn.textContent = "Copiado";
+      setTimeout(() => btn.textContent = 'Copiar', 2000);
+      showToast('Observación copiada y pre-llenada', 'success');
+    }).catch(() => { btn.textContent = 'Error'; setTimeout(() => btn.textContent = 'Copiar', 2000); });
+  }
+
+  function openStatusModal(id) {
+    current = novedades.find(n => Number(n.id) === Number(id));
+    if (!current) return;
+    document.getElementById('new-status').value = current.status;
+    document.getElementById('status-obs').value = current.observacion || '';
+    // reset botón
+    setBtnLoading('btn-submit-status','status-btn-text','status-btn-spinner', false);
+    document.getElementById('btn-cancel-status').disabled = false;
+    openModal('modal-status');
+  }
+
+  async function submitStatus() {
+    if (!current) return;
+    const status = document.getElementById('new-status').value;
+    const observacion = document.getElementById('status-obs').value.trim();
+    setBtnLoading('btn-submit-status','status-btn-text','status-btn-spinner', true);
+    document.getElementById('btn-cancel-status').disabled = true;
+    try {
+      const r = await http.patch(`/novedades/${current.id}/status`, { status, observacion });
+      const json = await r.json();
+      if (!r.ok) { showToast(json.message || 'Error', 'error'); return; }
+      showToast('Estado actualizado ✓', 'success');
+      closeModal('modal-status');
+      closeModal('modal-detail');
+      await Promise.all([loadNovedades(), loadStats()]);
+    } catch { showToast('Error de conexión', 'error'); }
+    finally {
+      setBtnLoading('btn-submit-status','status-btn-text','status-btn-spinner', false);
+      document.getElementById('btn-cancel-status').disabled = false;
+    }
+  }
+
+  function openRejectModal() {
+    document.getElementById('reject-obs').value = '';
+    setBtnLoading('btn-confirm-reject','reject-btn-text','reject-btn-spinner', false);
+    document.getElementById('btn-cancel-reject').disabled = false;
+    openModal('modal-reject');
+  }
+
+  async function changeStatus(status) {
+    if (!current) return;
+    const observacion = status === 'rejected'
+      ? document.getElementById('reject-obs').value.trim()
+      : '';
+
+    if (status === 'accepted') {
+      setBtnLoading('btn-approve','approve-text','approve-spinner', true);
+      document.getElementById('btn-reject').disabled = true;
+    } else {
+      setBtnLoading('btn-confirm-reject','reject-btn-text','reject-btn-spinner', true);
+      document.getElementById('btn-cancel-reject').disabled = true;
+    }
+
+    try {
+      const r = await http.patch(`/novedades/${current.id}/status`, { status, observacion });
+      const json = await r.json();
+      if (!r.ok) { showToast(json.message || 'Error', 'error'); return; }
+      showToast(status === 'accepted' ? 'Novedad aprobada ✓' : 'Novedad rechazada', status === 'accepted' ? 'success' : 'warning');
+      closeModal('modal-detail');
+      closeModal('modal-reject');
+      await Promise.all([loadNovedades(), loadStats()]);
+    } catch { showToast('Error de conexión', 'error'); }
+    finally {
+      setBtnLoading('btn-approve','approve-text','approve-spinner', false);
+      setBtnLoading('btn-confirm-reject','reject-btn-text','reject-btn-spinner', false);
+      document.getElementById('btn-reject').disabled = false;
+      document.getElementById('btn-cancel-reject').disabled = false;
+    }
+  }
+
+  function askDelete(id) {
+    deleteId = id;
+    setBtnLoading('btn-confirm-del','del-btn-text','del-btn-spinner', false);
+    document.getElementById('btn-cancel-del').disabled = false;
+    openModal('modal-del');
+  }
+
+  async function confirmDelete() {
+    if (!deleteId) return;
+    setBtnLoading('btn-confirm-del','del-btn-text','del-btn-spinner', true);
+    document.getElementById('btn-cancel-del').disabled = true;
+    try {
+      const r = await http.delete(`/novedades/${deleteId}`);
+      if (!r.ok) { showToast('Error al eliminar', 'error'); return; }
+      showToast('Novedad eliminada ✓', 'success');
+      closeModal('modal-del');
+      deleteId = null;
+      await Promise.all([loadNovedades(), loadStats()]);
+    } catch { showToast('Error de conexión', 'error'); }
+    finally {
+      setBtnLoading('btn-confirm-del','del-btn-text','del-btn-spinner', false);
+      document.getElementById('btn-cancel-del').disabled = false;
+    }
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+nombre,apellido,documento,correo,password,telefono,clan,cohorte,horario
+Laura,Martínez,1020304050,laura.martinez@example.com,Coder2024*,3101234567,Carthy,3,Mañana
+Carlos,Pérez,1030405060,carlos.perez@example.com,Coder2024*,3209876543,Tesla,3,Tarde
+Valentina,Gómez,1040506070,valentina.gomez@example.com,Coder2024*,,Tesla,4,Mañana
+Andrés,López,1050607080,andres.lopez@example.com,Coder2024*,3154321098,Tesla,4,Tarde
+Sofía,Ramírez,1060708090,sofia.ramirez@example.com,Coder2024*,3167654321,,3,Mañana

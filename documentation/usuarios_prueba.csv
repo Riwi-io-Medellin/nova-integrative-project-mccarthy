@@ -1,0 +1,8 @@
+nombre,apellido,documento,correo,password,telefono,clan,cohorte,horario
+Laura,Martinez,1020304050,laura.martinez@correo.com,Coder2024,3101234567,Tesla,3,Manana
+Carlos,Perez,1030405060,carlos.perez@correo.com,Coder2024,3209876543,Turing,3,Tarde
+Valentina,Gomez,1040506070,valentina.gomez@correo.com,Coder2024,,Lovelace,4,Manana
+Andres,Lopez,1050607080,andres.lopez@correo.com,Coder2024,3154321098,Carthy,4,Tarde
+Sofia,Ramirez,1060708090,sofia.ramirez@correo.com,Coder2024,3167654321,Curie,3,Manana
+Miguel,Torres,1070809100,miguel.torres@correo.com,Coder2024,3178765432,Tesla,5,Tarde
+Isabella,Vargas,1080910110,isabella.vargas@correo.com,Coder2024,,Turing,5,Manana

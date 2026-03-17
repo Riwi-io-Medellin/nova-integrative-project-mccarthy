@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Usuarios — NOVA</title>
+  <link rel="icon" href="../assets/img/logo_oscuro_SF.png" type="image/png">
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <style>
+    /* ── Roles ─────────────────────────────────────── */
+    .role-badge { display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:.75rem;font-weight:600;white-space:nowrap; }
+    .role-badge.administrador { background:#ede9fe;color:#5b21b6; }
+    .role-badge.coder         { background:#fce7f3;color:#9d174d; }
+
+    /* ── Estado ─────────────────────────────────────── */
+    .status-pill { display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:.75rem;font-weight:600; }
+    .status-pill .dot { width:7px;height:7px;border-radius:50%; }
+    .status-pill.activo    { background:#d1fae5;color:#065f46; } .status-pill.activo .dot    { background:#10b981; }
+    .status-pill.inactivo  { background:#fee2e2;color:#991b1b; } .status-pill.inactivo .dot  { background:#ef4444; }
+    .status-pill.egresado  { background:#dbeafe;color:#1e40af; } .status-pill.egresado .dot  { background:#3b82f6; }
+    .status-pill.abandono  { background:#fef3c7;color:#92400e; } .status-pill.abandono .dot  { background:#f59e0b; }
+    .status-pill.retirado  { background:#f3f4f6;color:#374151; } .status-pill.retirado .dot  { background:#9ca3af; }
+
+    /* ── Avatar ─────────────────────────────────────── */
+    .user-avatar-sm { width:34px;height:34px;border-radius:9px;background:var(--grad-primary);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;overflow:hidden;flex-shrink:0; }
+    .user-avatar-sm img { width:100%;height:100%;object-fit:cover; }
+
+    /* ── Botones acción ─────────────────────────────── */
+    .act-btn { padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;font-size:.78rem;transition:all var(--trans);display:inline-flex;align-items:center;gap:3px;white-space:nowrap;flex-shrink:0; }
+    .act-btn:hover      { border-color:var(--primary);color:var(--primary); }
+    .act-btn.red:hover  { border-color:var(--danger);color:var(--danger); }
+    .act-btn:disabled   { opacity:.5;cursor:not-allowed;pointer-events:none; }
+    .actions-cell       { display:flex;gap:4px;flex-wrap:nowrap;align-items:center; }
+
+    /* ── Tabla sin scroll horizontal ────────────────── */
+    .table-wrap         { overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:12px; border:1px solid var(--border); width:100%; }
+    .users-table        { width:100%; table-layout:fixed; border-collapse:collapse; font-size:.85rem; }
+    .users-table thead th { padding:10px 12px; text-align:left; font-weight:600; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.04em; background:var(--surface2); border-bottom:1px solid var(--border); overflow:hidden; }
+    .users-table tbody tr { border-bottom:1px solid var(--border); transition:background var(--trans); }
+    .users-table tbody tr:last-child { border-bottom:none; }
+    .users-table tbody tr:hover { background:var(--hover); }
+    .users-table tbody td { padding:11px 12px; color:var(--text2); vertical-align:middle; overflow:hidden; }
+
+    /* Anchos de columna proporcionales */
+    .col-estado   { width:100px; }
+    .col-usuario  { width:200px; }
+    .col-doc      { width:110px; }
+    .col-tel      { width:110px; }
+    .col-rol      { width:105px; }
+    .col-asign    { width:160px; }
+    .col-acc      { width:105px; }
+
+    /* Columna Asignación (3 datos verticales) */
+    .assign-cell { display:flex;flex-direction:column;gap:2px; }
+    .assign-chip { font-size:.72rem;color:var(--text3);display:flex;align-items:center;gap:4px; }
+    .assign-chip i { font-size:.72rem;opacity:.7; }
+    .assign-chip b { color:var(--text2);font-weight:500; }
+
+    /* ── Formulario ─────────────────────────────────── */
+    .form-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+    @media(max-width:600px){ .form-grid { grid-template-columns:1fr; } }
+    .user-view-header { display:flex;align-items:center;gap:16px;padding:20px;background:var(--grad-primary);border-radius:12px;margin-bottom:20px;color:#fff; }
+    .user-view-avatar { width:56px;height:56px;border-radius:14px;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;overflow:hidden;flex-shrink:0; }
+    .user-view-avatar img { width:100%;height:100%;object-fit:cover; }
+
+    /* ── Filtros responsive ─────────────────────────── */
+    .filter-row { display:flex;gap:10px;align-items:center;flex-wrap:wrap; }
+    .filter-row .search-wrap { position:relative;flex:1;min-width:120px;max-width:240px; }
+    .filter-row .search-wrap i { position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3); }
+    .filter-row .search-wrap input { padding-left:36px;width:100%; }
+
+    /* ── Btn loading state ──────────────────────────── */
+    .btn-spinner { display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0; }
+    .btn-spinner.dark { border-color:rgba(0,0,0,.2);border-top-color:var(--text2); }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .btn[disabled], button[disabled] { opacity:.6;cursor:not-allowed;pointer-events:none; }
+
+    /* ── Overlay de carga global ────────────────────── */
+    #loading-overlay { position:fixed;inset:0;background:rgba(0,0,0,.35);backdrop-filter:blur(2px);z-index:9999;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px; }
+    #loading-overlay.show { display:flex; }
+    #loading-overlay .lo-box { background:var(--surface);border-radius:16px;padding:28px 36px;display:flex;flex-direction:column;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.18); }
+    #loading-overlay .lo-spinner { width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite; }
+    #loading-overlay .lo-text { font-size:.9rem;color:var(--text2);font-weight:500; }
+
+    @media(max-width:768px) {
+      .col-tel,.col-doc { display:none; }
+      .col-estado  { width:36px; }
+      .col-usuario { width:160px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Overlay de carga global ──────────────────────── -->
+<div id="loading-overlay">
+  <div class="lo-box">
+    <div class="lo-spinner"></div>
+    <div class="lo-text" id="loading-text">Procesando...</div>
+  </div>
+</div>
+
+<!-- ── Sidebar ─────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <img src="../assets/img/logo_oscuro_SF.png" alt="Nova" id="logo-img">
+    <span>NOVA</span>
+  </div>
+  <nav class="sidebar-nav">
+    <a class="nav-link" href="novedades.html"><i class="bi bi-clipboard-check"></i><span class="nav-label">Novedades</span><span class="nav-badge" id="badge-pending" style="display:none">0</span></a>
+    <a class="nav-link active" href="users.html"><i class="bi bi-people"></i><span class="nav-label">Usuarios</span><span class="nav-badge" id="badge-inactivos" style="display:none">0</span></a>
+    <div style="height:1px;background:var(--border);margin:8px 0"></div>
+    <a class="nav-link" href="config.html"><i class="bi bi-gear"></i><span class="nav-label">Configuración</span></a>
+    <a class="nav-link" href="audit.html"><i class="bi bi-journal-text"></i><span class="nav-label">Auditoría</span></a>
+  </nav>
+  <div style="padding:12px 16px;border-top:1px solid var(--border)">
+    <div class="theme-toggle" style="margin-bottom:10px">
+      <button class="theme-btn" data-theme="light" onclick="setTheme('light')">☀️</button>
+      <button class="theme-btn" data-theme="dark"  onclick="setTheme('dark')">🌙</button>
+    </div>
+    <button class="nav-link" onclick="Auth.logout()" style="color:var(--danger)">
+      <i class="bi bi-box-arrow-right"></i><span class="nav-label">Cerrar sesión</span>
+    </button>
+  </div>
+</aside>
+
+<!-- ── Main ───────────────────────────────────────── -->
+<div class="main-layout" id="main-layout">
+  <header class="topbar">
+    <button onclick="toggleSidebar()" class="btn-icon btn-ghost"><i class="bi bi-list" style="font-size:1.2rem"></i></button>
+    <span class="topbar-title">Gestión de Usuarios</span>
+    <button class="btn btn-primary btn-sm" id="btn-nuevo" onclick="openForm(null)"><i class="bi bi-plus-lg"></i> Nuevo usuario</button>
+    <div class="user-avatar" id="topbar-avatar"></div>
+  </header>
+
+  <main class="page-content">
+
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin-bottom:24px">
+      <div class="stat-card"><div class="stat-icon purple"><i class="bi bi-people"></i></div><div><div class="stat-value" id="s-total">—</div><div class="stat-label">Total usuarios</div></div></div>
+      <div class="stat-card"><div class="stat-icon green"><i class="bi bi-person-check"></i></div><div><div class="stat-value" id="s-activos">—</div><div class="stat-label">Activos</div></div></div>
+      <div class="stat-card"><div class="stat-icon red"><i class="bi bi-person-x"></i></div><div><div class="stat-value" id="s-inactivos">—</div><div class="stat-label">Inactivos</div></div></div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-body" style="padding:14px 20px">
+        <div class="filter-row">
+          <div class="search-wrap">
+            <i class="bi bi-search"></i>
+            <input type="text" class="form-control" id="search-input" placeholder="Buscar usuario..." oninput="renderTable()">
+          </div>
+          <select class="form-select" style="width:175px;min-width:175px" id="filter-role" onchange="renderTable()">
+            <option value="">Todos los roles</option>
+          </select>
+          <select class="form-select" style="width:175px;min-width:175px" id="filter-estado" onchange="renderTable()">
+            <option value="">Todos los estados</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" id="btn-refresh" onclick="refreshAll()" title="Actualizar">
+            <i class="bi bi-arrow-clockwise"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="card">
+      <div class="table-wrap">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th class="col-estado">Estado</th>
+              <th class="col-usuario">Usuario</th>
+              <th class="col-doc">Documento</th>
+              <th class="col-tel">Teléfono</th>
+              <th class="col-rol">Rol</th>
+              <th class="col-asign">Asignación</th>
+              <th class="col-acc">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ── Modal: Crear/Editar usuario ───────────────── -->
+<div class="modal-overlay" id="modal-form">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-header">
+      <h3 id="form-title">Nuevo Usuario</h3>
+      <button class="modal-close" onclick="closeModal('modal-form')"><i class="bi bi-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="f-id">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Nombres *</label><input type="text" class="form-control" id="f-nombre" placeholder="Juan"></div>
+        <div class="form-group"><label class="form-label">Apellidos *</label><input type="text" class="form-control" id="f-apellido" placeholder="García"></div>
+        <div class="form-group"><label class="form-label">Tipo documento</label><select class="form-select" id="f-tipodoc"></select></div>
+        <div class="form-group"><label class="form-label">Documento *</label><input type="text" class="form-control" id="f-documento" placeholder="1234567890"></div>
+        <div class="form-group" style="grid-column:1/-1"><label class="form-label">Correo *</label><input type="email" class="form-control" id="f-correo" placeholder="correo@email.com"></div>
+        <div class="form-group"><label class="form-label">Contraseña <span id="pw-hint" style="color:var(--text3);font-size:.75rem">(dejar vacío = no cambiar)</span></label><input type="password" class="form-control" id="f-password" placeholder="••••••••"></div>
+        <div class="form-group"><label class="form-label">Teléfono</label><input type="tel" class="form-control" id="f-telefono" placeholder="3001234567"></div>
+        <div class="form-group"><label class="form-label">Rol *</label><select class="form-select" id="f-role"></select></div>
+        <div class="form-group"><label class="form-label">Estado *</label><select class="form-select" id="f-estado"></select></div>
+        <div class="form-group"><label class="form-label">Clan</label><select class="form-select" id="f-clan"><option value="">Sin asignar</option></select></div>
+        <div class="form-group"><label class="form-label">Horario</label><select class="form-select" id="f-horario"><option value="">Sin asignar</option></select></div>
+        <div class="form-group"><label class="form-label">Cohorte</label><select class="form-select" id="f-cohorte"><option value="">Sin asignar</option></select></div>
+        <div class="form-group" style="grid-column:1/-1"><label class="form-label">Avatar (URL o imagen)</label><input type="url" class="form-control" id="f-avatar" placeholder="https://..."><input type="file" class="form-control" id="f-avatar-file" accept="image/*" style="margin-top:6px"></div>
+        <div class="form-group" style="grid-column:1/-1"><label class="form-label">Observaciones</label><textarea class="form-control" id="f-obs" rows="2"></textarea></div>
+      </div>
+      <div id="form-error" style="color:var(--danger);font-size:.85rem;margin-top:8px;display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btn-cancelar-form" onclick="closeModal('modal-form')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-guardar" onclick="saveUser()">
+        <span id="btn-guardar-text"><i class="bi bi-check-lg"></i> Guardar</span>
+        <span id="btn-guardar-spinner" style="display:none" class="btn-spinner"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Ver usuario ─────────────────────────── -->
+<div class="modal-overlay" id="modal-view">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h3>Detalle de Usuario</h3>
+      <button class="modal-close" onclick="closeModal('modal-view')"><i class="bi bi-x"></i></button>
+    </div>
+    <div class="modal-body" id="view-content"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-view')">Cerrar</button>
+      <button class="btn btn-primary btn-sm" onclick="editFromView()"><i class="bi bi-pencil"></i> Editar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Confirm delete ─────────────────────────────── -->
+<div class="modal-overlay" id="modal-del">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-body" style="text-align:center;padding:32px">
+      <div style="font-size:3rem;margin-bottom:16px">👤</div>
+      <h3 style="margin-bottom:8px">¿Eliminar usuario?</h3>
+      <p>Se eliminarán también sus novedades asociadas.</p>
+    </div>
+    <div class="modal-footer" style="justify-content:center">
+      <button class="btn btn-ghost" id="btn-cancelar-del" onclick="closeModal('modal-del')">Cancelar</button>
+      <button class="btn btn-danger" id="btn-confirmar-del" onclick="confirmDelete()">
+        <span id="btn-del-text"><i class="bi bi-trash3"></i> Sí, eliminar</span>
+        <span id="btn-del-spinner" style="display:none" class="btn-spinner"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="../js/config.js"></script>
+<script src="../js/utils.js"></script>
+<script>
+  let users = [], catalogs = {}, deleteId = null, viewId = null;
+
+  // ── Helpers de loading ────────────────────────────
+  function showOverlay(msg = 'Procesando...') {
+    document.getElementById('loading-text').textContent = msg;
+    document.getElementById('loading-overlay').classList.add('show');
+  }
+  function hideOverlay() {
+    document.getElementById('loading-overlay').classList.remove('show');
+  }
+
+  function setBtnLoading(btnId, textId, spinnerId, loading, originalHTML) {
+    const btn = document.getElementById(btnId);
+    const txt = document.getElementById(textId);
+    const sp  = document.getElementById(spinnerId);
+    if (!btn) return;
+    btn.disabled = loading;
+    if (txt) txt.style.display = loading ? 'none' : '';
+    if (sp)  sp.style.display  = loading ? ''     : 'none';
+    if (!loading && originalHTML && txt) txt.innerHTML = originalHTML;
+  }
+
+  function setRefreshLoading(loading) {
+    const btn = document.getElementById('btn-refresh');
+    if (!btn) return;
+    btn.disabled = loading;
+    btn.innerHTML = loading
+      ? '<span class="btn-spinner dark" style="width:13px;height:13px;border-width:2px"></span>'
+      : '<i class="bi bi-arrow-clockwise"></i>';
+  }
+
+  // ── Init ──────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    initTheme(); initSidebar();
+    const user = Auth.requireAdmin();
+    if (!user) return;
+    renderTopbarUser();
+    updateLogo();
+    Promise.all([loadCatalogs(), loadUsers(), loadStats(), loadPendingBadge()]);
+  });
+
+  function updateLogo() {
+    const isDark = document.body.classList.contains('dark');
+    document.getElementById('logo-img').src = isDark
+      ? '../assets/img/logo_Oscuro-removebg-preview.png'
+      : '../assets/img/logo_claro-removebg-preview.png';
+  }
+  const _setTheme = setTheme;
+  window.setTheme = t => { _setTheme(t); updateLogo(); };
+
+  async function refreshAll() {
+    setRefreshLoading(true);
+    try {
+      await Promise.all([loadUsers(), loadStats(), loadPendingBadge()]);
+    } finally {
+      setRefreshLoading(false);
+    }
+  }
+
+  async function loadPendingBadge() {
+    try {
+      const r = await http.get('/novedades/stats');
+      const { data } = await r.json();
+      const b = document.getElementById('badge-pending');
+      if (data.pending > 0) { b.textContent = data.pending; b.style.display = ''; }
+      else { b.style.display = 'none'; }
+    } catch {}
+  }
+
+  async function loadStats() {
+    try {
+      const r = await http.get('/users/stats');
+      const d = await r.json();
+      document.getElementById('s-total').textContent    = d.total;
+      document.getElementById('s-activos').textContent  = d.activos;
+      document.getElementById('s-inactivos').textContent= d.inactivos;
+      const badge = document.getElementById('badge-inactivos');
+      if (d.inactivos > 0) { badge.textContent = d.inactivos; badge.style.display = ''; }
+      else { badge.style.display = 'none'; }
+    } catch {}
+  }
+
+  async function loadCatalogs() {
+    try {
+      const r = await http.get('/catalogs');
+      catalogs = await r.json();
+      const fRole   = document.getElementById('filter-role');
+      const fEstado = document.getElementById('filter-estado');
+      catalogs.roles.forEach(v => fRole.insertAdjacentHTML('beforeend',`<option>${v}</option>`));
+      catalogs.estados.forEach(v => fEstado.insertAdjacentHTML('beforeend',`<option>${v}</option>`));
+    } catch {}
+  }
+
+  async function loadUsers() {
+    const COLS = 7;
+    document.getElementById('tbody').innerHTML =
+      `<tr><td colspan="${COLS}" style="text-align:center;padding:40px">
+        <div style="display:flex;align-items:center;justify-content:center;gap:10px;color:var(--text3)">
+          <div class="spinner"></div>Cargando usuarios...
+        </div></td></tr>`;
+    try {
+      const r = await http.get('/users');
+      users = await r.json();
+      renderTable();
+    } catch (err) {
+      document.getElementById('tbody').innerHTML =
+        `<tr><td colspan="${COLS}" style="text-align:center;padding:40px;color:var(--danger)">
+          <i class="bi bi-exclamation-triangle" style="font-size:1.5rem;display:block;margin-bottom:8px"></i>
+          Error al cargar: ${err.message}
+          <br><button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="loadUsers()">Reintentar</button>
+        </td></tr>`;
+    }
+  }
+
+  function renderTable() {
+    const q      = document.getElementById('search-input').value.toLowerCase();
+    const role   = document.getElementById('filter-role').value;
+    const estado = document.getElementById('filter-estado').value;
+    const COLS   = 7;
+
+    const rows = users.filter(u => {
+      if (role && u.role !== role) return false;
+      if (estado && u.estado !== estado) return false;
+      if (q && !JSON.stringify(u).toLowerCase().includes(q)) return false;
+      return true;
+    }).sort((a, b) => {
+      const isInactivo = u => (u.estado || '').toLowerCase() === 'inactivo';
+      if (isInactivo(a) && !isInactivo(b)) return -1;
+      if (!isInactivo(a) && isInactivo(b)) return 1;
+      return 0;
+    });
+
+    if (!rows.length) {
+      document.getElementById('tbody').innerHTML =
+        `<tr><td colspan="${COLS}" style="text-align:center;padding:40px;color:var(--text3)">Sin resultados</td></tr>`;
+      return;
+    }
+
+    document.getElementById('tbody').innerHTML = rows.map(u => {
+      const initials  = ((u.nombre||'')[0]||(u.apellido||'')[0]||'U').toUpperCase();
+      const roleClass = (u.role||'').toLowerCase();
+      const estClass  = (u.estado||'activo').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      const cohorteLabel = u.cohorte_numero !== null && u.cohorte_numero !== undefined
+        ? `Cohorte ${u.cohorte_numero}` : '—';
+
+      return `<tr>
+        <td class="col-estado">
+          <span class="status-pill ${estClass}">
+            <span class="dot"></span>
+            <span class="hide-xs">${u.estado}</span>
+          </span>
+        </td>
+        <td class="col-usuario">
+          <div style="display:flex;align-items:center;gap:8px;min-width:0">
+            <div class="user-avatar-sm">${u.avatar ? `<img src="${u.avatar}">` : initials}</div>
+            <div style="min-width:0">
+              <div style="font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.83rem">${u.nombre} ${u.apellido}</div>
+              <div style="font-size:.72rem;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u.correo}</div>
+            </div>
+          </div>
+        </td>
+        <td class="col-doc" style="font-size:.82rem">${u.documento||'—'}</td>
+        <td class="col-tel" style="font-size:.82rem;color:var(--text3)">${u.telefono||'—'}</td>
+        <td class="col-rol"><span class="role-badge ${roleClass}">${u.role}</span></td>
+        <td class="col-asign">
+          <div class="assign-cell">
+            <div class="assign-chip"><i class="bi bi-shield-check"></i><b>${u.clan||'—'}</b></div>
+            <div class="assign-chip"><i class="bi bi-collection"></i><b>${cohorteLabel}</b></div>
+            <div class="assign-chip"><i class="bi bi-clock"></i><b>${u.horario||'—'}</b></div>
+          </div>
+        </td>
+        <td class="col-acc">
+          <div class="actions-cell">
+            <button class="act-btn" title="Ver detalle" onclick="viewUser('${u.id}')"><i class="bi bi-eye"></i></button>
+            <button class="act-btn" title="Editar" onclick="openForm('${u.id}')"><i class="bi bi-pencil"></i></button>
+            <button class="act-btn red" title="Eliminar" onclick="askDelete('${u.id}')"><i class="bi bi-trash3"></i></button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function fillSelect(id, items, current, includeEmpty=true) {
+    const el = document.getElementById(id);
+    el.innerHTML = (includeEmpty ? '<option value="">Sin asignar</option>' : '') +
+      items.map(v => `<option ${v===current?'selected':''}>${v}</option>`).join('');
+  }
+
+  function openForm(id) {
+    const u = id ? users.find(x => x.id === id) : null;
+    document.getElementById('form-title').textContent = u ? 'Editar Usuario' : 'Nuevo Usuario';
+    document.getElementById('f-id').value       = u?.id || '';
+    document.getElementById('f-nombre').value   = u?.nombre || '';
+    document.getElementById('f-apellido').value = u?.apellido || '';
+    document.getElementById('f-documento').value= u?.documento || '';
+    document.getElementById('f-correo').value   = u?.correo || '';
+    document.getElementById('f-password').value = '';
+    document.getElementById('f-telefono').value = u?.telefono || '';
+    document.getElementById('f-avatar').value   = u?.avatar || '';
+    document.getElementById('f-obs').value      = u?.observaciones || '';
+    document.getElementById('f-avatar-file').value = '';
+    document.getElementById('pw-hint').style.display = u ? '' : 'none';
+    document.getElementById('f-password').placeholder = u ? 'Dejar vacío = no cambiar' : '••••••••';
+
+    // Resetear botón guardar por si quedó en estado loading
+    setBtnLoading('btn-guardar','btn-guardar-text','btn-guardar-spinner', false, '<i class="bi bi-check-lg"></i> Guardar');
+
+    fillSelect('f-tipodoc', catalogs.tipos_documento||[], u?.tipo_documento);
+    fillSelect('f-role',    catalogs.roles||[], u?.role, false);
+    fillSelect('f-estado',  catalogs.estados||[], u?.estado, false);
+    fillSelect('f-horario', catalogs.horarios||[], u?.horario);
+
+    const clanEl = document.getElementById('f-clan');
+    clanEl.innerHTML = '<option value="">Sin asignar</option>' +
+      (catalogs.clanes||[]).map(c =>
+        `<option ${c.nombre===u?.clan?'selected':''}>${c.nombre}</option>`).join('');
+
+    const cohEl = document.getElementById('f-cohorte');
+    cohEl.innerHTML = '<option value="">Sin asignar</option>' +
+      (catalogs.cohortes||[]).map(c =>
+        `<option value="${c.numero}" ${c.numero===u?.cohorte_numero?'selected':''}>${c.numero}</option>`).join('');
+
+    document.getElementById('form-error').style.display = 'none';
+    openModal('modal-form');
+  }
+
+  async function saveUser() {
+    const id    = document.getElementById('f-id').value;
+    const errEl = document.getElementById('form-error');
+    errEl.style.display = 'none';
+
+    const fields = {
+      nombre:        document.getElementById('f-nombre').value.trim(),
+      apellido:      document.getElementById('f-apellido').value.trim(),
+      documento:     document.getElementById('f-documento').value.trim(),
+      correo:        document.getElementById('f-correo').value.trim(),
+      password:      document.getElementById('f-password').value,
+      telefono:      document.getElementById('f-telefono').value.trim(),
+      role:          document.getElementById('f-role').value,
+      estado:        document.getElementById('f-estado').value,
+      tipo_documento:document.getElementById('f-tipodoc').value,
+      clan:          document.getElementById('f-clan').value,
+      horario:       document.getElementById('f-horario').value,
+      cohorte:       document.getElementById('f-cohorte').value,
+      avatar:        document.getElementById('f-avatar').value.trim(),
+      observaciones: document.getElementById('f-obs').value.trim(),
+    };
+
+    if (!fields.nombre||!fields.apellido||!fields.documento||!fields.correo||!fields.role) {
+      errEl.textContent = 'Completa los campos requeridos (*)'; errEl.style.display=''; return;
+    }
+    if (!id && !fields.password) {
+      errEl.textContent = 'La contraseña es requerida para nuevos usuarios'; errEl.style.display=''; return;
+    }
+
+    // Activar spinner en botón guardar
+    setBtnLoading('btn-guardar','btn-guardar-text','btn-guardar-spinner', true);
+    document.getElementById('btn-cancelar-form').disabled = true;
+
+    const fd = new FormData();
+    for (const [k,v] of Object.entries(fields)) if (v !== '') fd.append(k, v);
+    const avatarFile = document.getElementById('f-avatar-file').files[0];
+    if (avatarFile) fd.append('avatar', avatarFile);
+
+    try {
+      const r = id
+        ? await http.putForm(`/users/${id}`, fd)
+        : await http.postForm('/users', fd);
+      const data = await r.json();
+      if (!r.ok) {
+        errEl.textContent = data.error || 'Error al guardar';
+        errEl.style.display = '';
+        return;
+      }
+      showToast(id ? 'Usuario actualizado ✓' : 'Usuario creado ✓', 'success');
+      closeModal('modal-form');
+      await Promise.all([loadUsers(), loadStats()]);
+    } catch {
+      errEl.textContent = 'Error de conexión. Intenta de nuevo.';
+      errEl.style.display = '';
+    } finally {
+      setBtnLoading('btn-guardar','btn-guardar-text','btn-guardar-spinner', false, '<i class="bi bi-check-lg"></i> Guardar');
+      document.getElementById('btn-cancelar-form').disabled = false;
+    }
+  }
+
+  function viewUser(id) {
+    viewId = id;
+    const u = users.find(x => x.id === id);
+    if (!u) return;
+    const initials = ((u.nombre||'')[0]||(u.apellido||'')[0]||'U').toUpperCase();
+    const cohorteLabel = u.cohorte_numero !== null && u.cohorte_numero !== undefined
+      ? `Cohorte ${u.cohorte_numero}` : '—';
+    document.getElementById('view-content').innerHTML = `
+      <div class="user-view-header">
+        <div class="user-view-avatar">${u.avatar?`<img src="${u.avatar}">`:`${initials}`}</div>
+        <div>
+          <div style="font-size:1.15rem;font-weight:700">${u.nombre} ${u.apellido}</div>
+          <div style="opacity:.8;font-size:.9rem">${u.correo}</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        ${[
+          ['Documento',  u.documento],
+          ['Tipo doc.',  u.tipo_documento||'—'],
+          ['Teléfono',   u.telefono||'—'],
+          ['Rol',        u.role],
+          ['Estado',     u.estado],
+          ['Clan',       u.clan||'—'],
+          ['Cohorte',    cohorteLabel],
+          ['Horario',    u.horario||'—'],
+          ['Registrado', fmt.date(u.created_at)],
+        ].map(([l,v])=>`<div>
+          <div style="font-size:.78rem;color:var(--text3)">${l}</div>
+          <div style="font-weight:500;color:var(--text)">${v}</div>
+        </div>`).join('')}
+        ${u.observaciones?`<div style="grid-column:1/-1">
+          <div style="font-size:.78rem;color:var(--text3)">Observaciones</div>
+          <div style="font-weight:500;color:var(--text)">${u.observaciones}</div>
+        </div>`:''}
+      </div>`;
+    openModal('modal-view');
+  }
+
+  function editFromView() { closeModal('modal-view'); openForm(viewId); }
+  function askDelete(id) {
+    deleteId = id;
+    // Resetear botón eliminar
+    setBtnLoading('btn-confirmar-del','btn-del-text','btn-del-spinner', false, '<i class="bi bi-trash3"></i> Sí, eliminar');
+    openModal('modal-del');
+  }
+
+  async function confirmDelete() {
+    if (!deleteId) return;
+    setBtnLoading('btn-confirmar-del','btn-del-text','btn-del-spinner', true);
+    document.getElementById('btn-cancelar-del').disabled = true;
+    try {
+      const r = await http.delete(`/users/${deleteId}`);
+      if (!r.ok) {
+        showToast('Error al eliminar el usuario', 'error');
+        return;
+      }
+      showToast('Usuario eliminado ✓', 'success');
+      closeModal('modal-del');
+      deleteId = null;
+      await Promise.all([loadUsers(), loadStats()]);
+    } catch {
+      showToast('Error de conexión. Intenta de nuevo.', 'error');
+    } finally {
+      setBtnLoading('btn-confirmar-del','btn-del-text','btn-del-spinner', false, '<i class="bi bi-trash3"></i> Sí, eliminar');
+      document.getElementById('btn-cancelar-del').disabled = false;
+    }
+  }
+</script>
+</body>
+</html>

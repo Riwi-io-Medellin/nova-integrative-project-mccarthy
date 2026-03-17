@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuración — NOVA</title>
+  <link rel="icon" href="../assets/img/logo_oscuro_SF.png" type="image/png">
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <style>
+    .config-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+    @media(max-width:768px) { .config-grid { grid-template-columns:1fr; } }
+
+    .config-card { background:var(--surface); border-radius:16px; border:1px solid var(--border); overflow:hidden; }
+    .config-card-header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .config-card-header h3 { margin:0; font-size:1rem; display:flex; align-items:center; gap:8px; }
+    .config-list { list-style:none; padding:0; margin:0; max-height:340px; overflow-y:auto; }
+    .config-item { display:flex; align-items:center; justify-content:space-between; padding:11px 20px; border-bottom:1px solid var(--border); gap:10px; }
+    .config-item:last-child { border-bottom:none; }
+    .item-label { flex:1; font-size:.9rem; color:var(--text2); }
+    .item-label.hidden { display:none; }
+    .edit-inline { display:none; flex:1; gap:6px; align-items:center; }
+    .edit-inline.active { display:flex; }
+    .edit-inline input { flex:1; }
+    .btn-icon-sm { width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.85rem;transition:all var(--trans); }
+    .btn-icon-sm:hover       { border-color:var(--primary);color:var(--primary); }
+    .btn-icon-sm.red:hover   { border-color:var(--danger);color:var(--danger); }
+    .btn-icon-sm:disabled    { opacity:.45;cursor:not-allowed;pointer-events:none; }
+    .add-row  { display:flex; gap:8px; padding:12px 20px; border-top:1px solid var(--border); background:var(--surface2); }
+    .config-empty { padding:32px; text-align:center; color:var(--text3); font-size:.875rem; }
+
+    /* ── Btn spinner ── */
+    .btn-spinner { display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0; }
+    .btn-spinner.dark { border-color:rgba(0,0,0,.15);border-top-color:var(--text2); }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    button[disabled],.btn[disabled] { opacity:.6;cursor:not-allowed;pointer-events:none; }
+
+    /* ── Bulk import ─────────────────────────────────── */
+    .bulk-card { background:var(--surface); border-radius:16px; border:2px dashed var(--border); overflow:hidden; }
+    .bulk-card.drag-over { border-color:var(--primary); background:var(--primary-glow); }
+    .drop-zone { padding:32px 20px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; text-align:center; cursor:pointer; transition:all var(--trans); }
+    .drop-icon { width:52px;height:52px;border-radius:14px;background:var(--primary-glow);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:1.5rem; }
+    .drop-title { font-weight:600; color:var(--text); }
+    .drop-sub   { font-size:.82rem; color:var(--text3); }
+    .import-result { padding:16px 20px; border-top:1px solid var(--border); }
+    .result-row { display:flex; gap:12px; flex-wrap:wrap; }
+    .result-chip { padding:4px 12px; border-radius:999px; font-size:.8rem; font-weight:600; }
+    .result-chip.ok  { background:#d1fae5;color:#065f46; }
+    .result-chip.skip{ background:#fef3c7;color:#92400e; }
+    .result-chip.err { background:#fee2e2;color:#991b1b; }
+    .error-list { margin-top:10px; max-height:120px; overflow-y:auto; }
+    .error-item { font-size:.78rem; color:var(--danger); padding:2px 0; }
+    input[type="file"]#csv-input { display:none; }
+    .csv-format { background:var(--surface2);border-radius:10px;padding:12px 16px;font-size:.78rem;color:var(--text3);margin:0 20px 20px; }
+    .csv-format code { display:block;margin-top:4px;color:var(--primary);word-break:break-all;font-family:monospace; }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <img src="../assets/img/logo_oscuro_SF.png" alt="Nova" id="logo-img">
+    <span>NOVA</span>
+  </div>
+  <nav class="sidebar-nav">
+    <a class="nav-link" href="novedades.html"><i class="bi bi-clipboard-check"></i><span class="nav-label">Novedades</span><span class="nav-badge" id="badge-pending" style="display:none">0</span></a>
+    <a class="nav-link" href="users.html"><i class="bi bi-people"></i><span class="nav-label">Usuarios</span><span class="nav-badge" id="badge-inactivos" style="display:none">0</span></a>
+    <div style="height:1px;background:var(--border);margin:8px 0"></div>
+    <a class="nav-link active" href="config.html"><i class="bi bi-gear"></i><span class="nav-label">Configuración</span></a>
+    <a class="nav-link" href="audit.html"><i class="bi bi-journal-text"></i><span class="nav-label">Auditoría</span></a>
+  </nav>
+  <div style="padding:12px 16px;border-top:1px solid var(--border)">
+    <div class="theme-toggle" style="margin-bottom:10px">
+      <button class="theme-btn" data-theme="light" onclick="setTheme('light')">☀️</button>
+      <button class="theme-btn" data-theme="dark"  onclick="setTheme('dark')">🌙</button>
+    </div>
+    <button class="nav-link" onclick="Auth.logout()" style="color:var(--danger)">
+      <i class="bi bi-box-arrow-right"></i><span class="nav-label">Cerrar sesión</span>
+    </button>
+  </div>
+</aside>
+
+<div class="main-layout" id="main-layout">
+  <header class="topbar">
+    <button onclick="toggleSidebar()" class="btn-icon btn-ghost"><i class="bi bi-list" style="font-size:1.2rem"></i></button>
+    <span class="topbar-title">Configuración</span>
+    <div class="user-avatar" id="topbar-avatar"></div>
+  </header>
+
+  <main class="page-content">
+    <p style="color:var(--text3);font-size:.9rem;margin-bottom:24px">Administra catálogos de clanes, cohortes y carga masiva de usuarios.</p>
+
+    <div class="config-grid" style="margin-bottom:24px">
+
+      <!-- CLANES -->
+      <div class="config-card">
+        <div class="config-card-header">
+          <h3><i class="bi bi-shield-check" style="color:var(--primary)"></i>Clanes</h3>
+          <span style="font-size:.78rem;color:var(--text3)" id="clan-count">0 registros</span>
+        </div>
+        <ul class="config-list" id="clan-list">
+          <li class="config-empty"><div class="spinner" style="margin:0 auto 8px"></div>Cargando...</li>
+        </ul>
+        <div class="add-row">
+          <input type="text" class="form-control" id="clan-new" placeholder="Nombre del clan (ej: Tesla)" style="flex:1">
+          <button class="btn btn-primary btn-sm" id="btn-add-clan" onclick="addClan()">
+            <span id="add-clan-text"><i class="bi bi-plus-lg"></i> Agregar</span>
+            <span id="add-clan-spinner" style="display:none" class="btn-spinner"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- COHORTES -->
+      <div class="config-card">
+        <div class="config-card-header">
+          <h3><i class="bi bi-collection" style="color:var(--primary)"></i>Cohortes</h3>
+          <span style="font-size:.78rem;color:var(--text3)" id="cohorte-count">0 registros</span>
+        </div>
+        <ul class="config-list" id="cohorte-list">
+          <li class="config-empty"><div class="spinner" style="margin:0 auto 8px"></div>Cargando...</li>
+        </ul>
+        <div class="add-row">
+          <input type="number" class="form-control" id="cohorte-new" placeholder="Número (ej: 6)" min="1" style="flex:1">
+          <button class="btn btn-primary btn-sm" id="btn-add-cohorte" onclick="addCohorte()">
+            <span id="add-cohorte-text"><i class="bi bi-plus-lg"></i> Agregar</span>
+            <span id="add-cohorte-spinner" style="display:none" class="btn-spinner"></span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- CARGA MASIVA CSV -->
+    <div class="bulk-card" id="bulk-card">
+      <div style="padding:20px 20px 0">
+        <h3 style="margin:0 0 4px;display:flex;align-items:center;gap:8px;font-size:1rem">
+          <i class="bi bi-cloud-upload" style="color:var(--primary)"></i>Carga masiva de Coders
+        </h3>
+        <p style="margin:0 0 12px;font-size:.85rem;color:var(--text3)">
+          El sistema detecta las columnas automáticamente por nombre. Carga el CSV, revisa la vista previa y confirma para importar.
+        </p>
+      </div>
+      <div class="csv-format">
+        <b>Columnas obligatorias:</b> nombre, apellido, documento, correo, password<br>
+        <b>Opcionales:</b> tipo_documento, telefono, role, estado, clan, cohorte, horario, observaciones<br>
+        <span style="opacity:.7">El orden de las columnas no importa — el sistema las mapea por nombre.</span>
+        <code>nombre,apellido,documento,correo,password,telefono,clan,cohorte,horario</code>
+      </div>
+
+      <div id="step-upload">
+        <div class="drop-zone" id="drop-zone"
+             onclick="document.getElementById('csv-input').click()"
+             ondragover="handleDrag(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+          <div class="drop-icon"><i class="bi bi-file-earmark-spreadsheet"></i></div>
+          <div class="drop-title">Arrastra tu CSV aquí o haz clic para seleccionar</div>
+          <div class="drop-sub" id="drop-filename">Máximo 5 MB · Solo archivos .csv</div>
+          <input type="file" id="csv-input" accept=".csv" onchange="handleFileSelect(event)">
+        </div>
+      </div>
+
+      <div id="step-preview" style="display:none;padding:16px 20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <div>
+            <div id="preview-title" style="font-weight:600;font-size:.95rem"></div>
+            <div id="preview-sub"   style="font-size:.8rem;color:var(--text3);margin-top:2px"></div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="resetUpload()"><i class="bi bi-arrow-left"></i> Cambiar archivo</button>
+            <button class="btn btn-primary btn-sm" id="btn-confirm" onclick="confirmImport()">
+              <span id="confirm-text"><i class="bi bi-upload"></i> Cargar datos</span>
+              <span id="confirm-spinner" style="display:none" class="btn-spinner"></span>
+            </button>
+          </div>
+        </div>
+        <div id="preview-errors" style="display:none;margin-bottom:10px"></div>
+        <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;max-height:280px;overflow-y:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:.78rem">
+            <thead id="preview-head" style="position:sticky;top:0;background:var(--surface2)"></thead>
+            <tbody id="preview-body"></tbody>
+          </table>
+        </div>
+        <p style="font-size:.75rem;color:var(--text3);margin-top:8px">Vista previa — máximo 10 filas mostradas.</p>
+      </div>
+
+      <div id="import-result" class="import-result" style="display:none"></div>
+    </div>
+
+  </main>
+</div>
+
+<div id="toast-container"></div>
+<script src="../js/config.js"></script>
+<script src="../js/utils.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    initTheme(); initSidebar();
+    Auth.requireAdmin();
+    renderTopbarUser();
+    loadPendingBadge();
+    loadClanes();
+    loadCohortes();
+    document.getElementById('clan-new').addEventListener('keydown',    e => { if(e.key==='Enter') addClan(); });
+    document.getElementById('cohorte-new').addEventListener('keydown', e => { if(e.key==='Enter') addCohorte(); });
+  });
+
+  // ── Helper spinner ────────────────────────────────
+  function setBtnLoading(btnId, textId, spinnerId, loading) {
+    const btn = document.getElementById(btnId);
+    const txt = document.getElementById(textId);
+    const sp  = document.getElementById(spinnerId);
+    if (btn) btn.disabled = loading;
+    if (txt) txt.style.display = loading ? 'none' : '';
+    if (sp)  sp.style.display  = loading ? ''     : 'none';
+  }
+
+  async function loadPendingBadge() {
+    try {
+      const r = await http.get('/novedades/stats');
+      const { data } = await r.json();
+      const b = document.getElementById('badge-pending');
+      if (data.pending > 0) { b.textContent = data.pending; b.style.display = ''; }
+      else { b.style.display = 'none'; }
+    } catch {}
+    try {
+      const r2 = await http.get('/users/stats');
+      const d2 = await r2.json();
+      const b2 = document.getElementById('badge-inactivos');
+      if (b2) { if (d2.inactivos > 0) { b2.textContent = d2.inactivos; b2.style.display = ''; } else { b2.style.display = 'none'; } }
+    } catch {}
+  }
+
+  // ═══ CLANES ════════════════════════════════════════════
+  let clanes = [];
+  async function loadClanes() {
+    try {
+      const r = await http.get('/catalogs/clanes');
+      clanes = await r.json();
+      renderClanes();
+    } catch { document.getElementById('clan-list').innerHTML = '<li class="config-empty">Error al cargar</li>'; }
+  }
+
+  function renderClanes() {
+    document.getElementById('clan-count').textContent = `${clanes.length} registro${clanes.length!==1?'s':''}`;
+    if (!clanes.length) { document.getElementById('clan-list').innerHTML='<li class="config-empty">Sin clanes registrados</li>'; return; }
+    document.getElementById('clan-list').innerHTML = clanes.map(c => `
+      <li class="config-item" id="clan-item-${c.id}">
+        <span class="item-label" id="clan-label-${c.id}">${c.nombre}</span>
+        <div class="edit-inline" id="clan-edit-${c.id}">
+          <input type="text" class="form-control" id="clan-edit-input-${c.id}" value="${c.nombre}" style="height:32px;font-size:.85rem">
+          <button class="btn-icon-sm" id="clan-save-${c.id}" onclick="saveClan(${c.id})" title="Guardar"><i class="bi bi-check-lg"></i></button>
+          <button class="btn-icon-sm" onclick="cancelEditClan(${c.id})" title="Cancelar"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="actions" id="clan-actions-${c.id}" style="display:flex;gap:6px">
+          <button class="btn-icon-sm" onclick="editClan(${c.id})" title="Editar"><i class="bi bi-pencil"></i></button>
+          <button class="btn-icon-sm red" id="clan-del-${c.id}" onclick="deleteClan(${c.id})" title="Eliminar"><i class="bi bi-trash3"></i></button>
+        </div>
+      </li>`).join('');
+  }
+
+  function editClan(id) {
+    document.getElementById(`clan-label-${id}`).classList.add('hidden');
+    document.getElementById(`clan-edit-${id}`).classList.add('active');
+    document.getElementById(`clan-actions-${id}`).style.display='none';
+    document.getElementById(`clan-edit-input-${id}`).focus();
+  }
+  function cancelEditClan(id) {
+    document.getElementById(`clan-label-${id}`).classList.remove('hidden');
+    document.getElementById(`clan-edit-${id}`).classList.remove('active');
+    document.getElementById(`clan-actions-${id}`).style.display='flex';
+  }
+
+  async function saveClan(id) {
+    const nombre = document.getElementById(`clan-edit-input-${id}`).value.trim();
+    if (!nombre) return;
+    const btn = document.getElementById(`clan-save-${id}`);
+    btn.disabled = true;
+    btn.innerHTML = '<span class="btn-spinner dark" style="width:11px;height:11px;border-width:2px"></span>';
+    try {
+      const r = await http.put(`/catalogs/clanes/${id}`, { nombre });
+      if (!r.ok) { showToast((await r.json()).error,'error'); return; }
+      showToast('Clan actualizado ✓','success');
+      loadClanes();
+    } catch { showToast('Error de conexión','error'); }
+    finally { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg"></i>'; }
+  }
+
+  async function addClan() {
+    const nombre = document.getElementById('clan-new').value.trim();
+    if (!nombre) return;
+    setBtnLoading('btn-add-clan','add-clan-text','add-clan-spinner', true);
+    document.getElementById('clan-new').disabled = true;
+    try {
+      const r = await http.post('/catalogs/clanes', { nombre });
+      if (!r.ok) { showToast((await r.json()).error,'error'); return; }
+      document.getElementById('clan-new').value = '';
+      showToast('Clan agregado ✓','success');
+      loadClanes();
+    } catch { showToast('Error de conexión','error'); }
+    finally {
+      setBtnLoading('btn-add-clan','add-clan-text','add-clan-spinner', false);
+      document.getElementById('clan-new').disabled = false;
+    }
+  }
+
+  async function deleteClan(id) {
+    if (!confirm('¿Eliminar este clan?')) return;
+    const btn = document.getElementById(`clan-del-${id}`);
+    btn.disabled = true;
+    btn.innerHTML = '<span class="btn-spinner dark" style="width:11px;height:11px;border-width:2px"></span>';
+    try {
+      const r = await http.delete(`/catalogs/clanes/${id}`);
+      if (!r.ok) { showToast((await r.json()).error,'error'); btn.disabled=false; btn.innerHTML='<i class="bi bi-trash3"></i>'; return; }
+      showToast('Clan eliminado ✓','success');
+      loadClanes();
+    } catch { showToast('Error de conexión','error'); btn.disabled=false; btn.innerHTML='<i class="bi bi-trash3"></i>'; }
+  }
+
+  // ═══ COHORTES ══════════════════════════════════════════
+  let cohortes = [];
+  async function loadCohortes() {
+    try {
+      const r = await http.get('/catalogs/cohortes');
+      cohortes = await r.json();
+      renderCohortes();
+    } catch { document.getElementById('cohorte-list').innerHTML='<li class="config-empty">Error al cargar</li>'; }
+  }
+
+  function renderCohortes() {
+    document.getElementById('cohorte-count').textContent = `${cohortes.length} registro${cohortes.length!==1?'s':''}`;
+    if (!cohortes.length) { document.getElementById('cohorte-list').innerHTML='<li class="config-empty">Sin cohortes registradas</li>'; return; }
+    document.getElementById('cohorte-list').innerHTML = cohortes.map(c => `
+      <li class="config-item" id="cohorte-item-${c.id}">
+        <span class="item-label" id="cohorte-label-${c.id}">Cohorte ${c.numero}</span>
+        <div class="edit-inline" id="cohorte-edit-${c.id}">
+          <input type="number" class="form-control" id="cohorte-edit-input-${c.id}" value="${c.numero}" min="1" style="height:32px;font-size:.85rem;width:90px">
+          <button class="btn-icon-sm" id="cohorte-save-${c.id}" onclick="saveCohorte(${c.id})" title="Guardar"><i class="bi bi-check-lg"></i></button>
+          <button class="btn-icon-sm" onclick="cancelEditCohorte(${c.id})" title="Cancelar"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="actions" id="cohorte-actions-${c.id}" style="display:flex;gap:6px">
+          <button class="btn-icon-sm" onclick="editCohorte(${c.id})" title="Editar"><i class="bi bi-pencil"></i></button>
+          <button class="btn-icon-sm red" id="cohorte-del-${c.id}" onclick="deleteCohorte(${c.id})" title="Eliminar"><i class="bi bi-trash3"></i></button>
+        </div>
+      </li>`).join('');
+  }
+
+  function editCohorte(id) {
+    document.getElementById(`cohorte-label-${id}`).classList.add('hidden');
+    document.getElementById(`cohorte-edit-${id}`).classList.add('active');
+    document.getElementById(`cohorte-actions-${id}`).style.display='none';
+    document.getElementById(`cohorte-edit-input-${id}`).focus();
+  }
+  function cancelEditCohorte(id) {
+    document.getElementById(`cohorte-label-${id}`).classList.remove('hidden');
+    document.getElementById(`cohorte-edit-${id}`).classList.remove('active');
+    document.getElementById(`cohorte-actions-${id}`).style.display='flex';
+  }
+
+  async function saveCohorte(id) {
+    const numero = document.getElementById(`cohorte-edit-input-${id}`).value;
+    if (!numero) return;
+    const btn = document.getElementById(`cohorte-save-${id}`);
+    btn.disabled = true;
+    btn.innerHTML = '<span class="btn-spinner dark" style="width:11px;height:11px;border-width:2px"></span>';
+    try {
+      const r = await http.put(`/catalogs/cohortes/${id}`, { numero });
+      if (!r.ok) { showToast((await r.json()).error,'error'); return; }
+      showToast('Cohorte actualizada ✓','success');
+      loadCohortes();
+    } catch { showToast('Error de conexión','error'); }
+    finally { btn.disabled=false; btn.innerHTML='<i class="bi bi-check-lg"></i>'; }
+  }
+
+  async function addCohorte() {
+    const numero = document.getElementById('cohorte-new').value;
+    if (!numero) return;
+    setBtnLoading('btn-add-cohorte','add-cohorte-text','add-cohorte-spinner', true);
+    document.getElementById('cohorte-new').disabled = true;
+    try {
+      const r = await http.post('/catalogs/cohortes', { numero });
+      if (!r.ok) { showToast((await r.json()).error,'error'); return; }
+      document.getElementById('cohorte-new').value = '';
+      showToast('Cohorte agregada ✓','success');
+      loadCohortes();
+    } catch { showToast('Error de conexión','error'); }
+    finally {
+      setBtnLoading('btn-add-cohorte','add-cohorte-text','add-cohorte-spinner', false);
+      document.getElementById('cohorte-new').disabled = false;
+    }
+  }
+
+  async function deleteCohorte(id) {
+    if (!confirm('¿Eliminar esta cohorte?')) return;
+    const btn = document.getElementById(`cohorte-del-${id}`);
+    btn.disabled = true;
+    btn.innerHTML = '<span class="btn-spinner dark" style="width:11px;height:11px;border-width:2px"></span>';
+    try {
+      const r = await http.delete(`/catalogs/cohortes/${id}`);
+      if (!r.ok) { showToast((await r.json()).error,'error'); btn.disabled=false; btn.innerHTML='<i class="bi bi-trash3"></i>'; return; }
+      showToast('Cohorte eliminada ✓','success');
+      loadCohortes();
+    } catch { showToast('Error de conexión','error'); btn.disabled=false; btn.innerHTML='<i class="bi bi-trash3"></i>'; }
+  }
+
+  // ═══ CARGA MASIVA CSV ══════════════════════════════════
+  const REQUIRED_COLS = ['nombre','apellido','documento','correo','password'];
+  let csvFile = null;
+  let csvParsed = null;
+
+  function handleDrag(e) { e.preventDefault(); document.getElementById('bulk-card').classList.add('drag-over'); }
+  function handleDragLeave() { document.getElementById('bulk-card').classList.remove('drag-over'); }
+  function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('bulk-card').classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) loadCsvPreview(file);
+  }
+  function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (file) loadCsvPreview(file);
+  }
+
+  function parseCSVLine(line) {
+    const result = [];
+    let cur = '', inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { inQuotes = !inQuotes; continue; }
+      if (ch === ',' && !inQuotes) { result.push(cur.trim()); cur = ''; continue; }
+      cur += ch;
+    }
+    result.push(cur.trim());
+    return result;
+  }
+
+  function loadCsvPreview(file) {
+    if (!file.name.toLowerCase().endsWith('.csv')) { showToast('Solo se aceptan archivos .csv', 'error'); return; }
+    if (file.size > 5 * 1024 * 1024) { showToast('El archivo supera 5 MB', 'error'); return; }
+    csvFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const text  = e.target.result;
+      const lines = text.split('\n').map(l => l.replace(/\r/,'')).filter(l => l.trim());
+      if (lines.length < 2) { showToast('El CSV está vacío o no tiene datos', 'error'); return; }
+      const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().trim());
+      const rows    = lines.slice(1).map(l => {
+        const cols = parseCSVLine(l);
+        const row  = {};
+        headers.forEach((h, i) => { row[h] = (cols[i] || '').trim(); });
+        return row;
+      });
+      csvParsed = { headers, rows };
+      showPreview(file.name, headers, rows);
+    };
+    reader.readAsText(file, 'utf-8');
+  }
+
+  function showPreview(filename, headers, rows) {
+    const missing = REQUIRED_COLS.filter(c => !headers.includes(c));
+    document.getElementById('step-upload').style.display  = 'none';
+    document.getElementById('step-preview').style.display = 'block';
+    document.getElementById('import-result').style.display= 'none';
+    document.getElementById('preview-title').textContent = `${filename}`;
+    document.getElementById('preview-sub').textContent   = `${rows.length} fila${rows.length!==1?'s':''} detectadas · ${headers.length} columnas`;
+
+    const errEl = document.getElementById('preview-errors');
+    if (missing.length) {
+      errEl.innerHTML = `<div style="background:var(--danger-bg,#fee2e2);color:#991b1b;border-radius:8px;padding:10px 14px;font-size:.82rem;border-left:4px solid #ef4444">
+        <b>Faltan columnas obligatorias:</b> ${missing.join(', ')}<br>
+        <span style="opacity:.8">Verifica los encabezados del CSV y vuelve a cargar.</span>
+      </div>`;
+      errEl.style.display = '';
+      document.getElementById('btn-confirm').disabled = true;
+    } else {
+      errEl.style.display = 'none';
+      document.getElementById('btn-confirm').disabled = false;
+    }
+
+    const displayCols = headers.slice(0, 8);
+    document.getElementById('preview-head').innerHTML = `<tr>
+      <th style="padding:7px 10px;font-size:.72rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">#</th>
+      ${displayCols.map(h => {
+        const req = REQUIRED_COLS.includes(h);
+        return `<th style="padding:7px 10px;font-size:.72rem;font-weight:700;color:${req?'var(--primary)':'var(--text3)'};text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">
+          ${h}${req?' *':''}
+        </th>`;
+      }).join('')}
+    </tr>`;
+
+    const previewRows = rows.slice(0, 10);
+    document.getElementById('preview-body').innerHTML = previewRows.map((row, i) => `
+      <tr style="border-top:1px solid var(--border)">
+        <td style="padding:6px 10px;color:var(--text3);font-size:.75rem">${i+1}</td>
+        ${displayCols.map(h => `<td style="padding:6px 10px;font-size:.78rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${row[h]||''}">
+          ${row[h] && h==='password' ? '••••••' : (row[h]||'—')}
+        </td>`).join('')}
+      </tr>`).join('');
+  }
+
+  function resetUpload() {
+    csvFile = null; csvParsed = null;
+    document.getElementById('step-upload').style.display  = 'block';
+    document.getElementById('step-preview').style.display = 'none';
+    document.getElementById('import-result').style.display= 'none';
+    document.getElementById('drop-filename').textContent  = 'Máximo 5 MB · Solo archivos .csv';
+    document.getElementById('csv-input').value = '';
+  }
+
+  async function confirmImport() {
+    if (!csvFile) return;
+    setBtnLoading('btn-confirm','confirm-text','confirm-spinner', true);
+    const fd = new FormData();
+    fd.append('csv', csvFile);
+    try {
+      const token = localStorage.getItem('nova_token');
+      const r = await fetch('/api/users/bulk-import', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: fd
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        showToast(data.error || 'Error al procesar CSV', 'error');
+        setBtnLoading('btn-confirm','confirm-text','confirm-spinner', false);
+        return;
+      }
+      document.getElementById('step-preview').style.display = 'none';
+      showImportResult(data);
+      showToast(`Importación completada: ${data.created} usuario${data.created!==1?'s':''} creado${data.created!==1?'s':''}`, 'success');
+    } catch {
+      showToast('Error de conexión', 'error');
+      setBtnLoading('btn-confirm','confirm-text','confirm-spinner', false);
+    }
+  }
+
+  function showImportResult(data) {
+    const el = document.getElementById('import-result');
+    let html = `<div class="result-row">
+      <span class="result-chip ok">✓ ${data.created} creado${data.created!==1?'s':''}</span>
+      <span class="result-chip skip">◎ ${data.skipped} duplicado${data.skipped!==1?'s':''}</span>
+      ${data.errors.length ? `<span class="result-chip err">✕ ${data.errors.length} error${data.errors.length!==1?'es':''}</span>` : ''}
+    </div>`;
+    if (data.errors.length) {
+      html += `<div class="error-list">` +
+        data.errors.map(e => `<div class="error-item">Fila ${e.fila}: ${e.error}</div>`).join('') +
+        `</div>`;
+    }
+    html += `<div style="margin-top:10px">
+      <button class="btn btn-ghost btn-sm" onclick="resetUpload()"><i class="bi bi-plus"></i> Cargar otro archivo</button>
+    </div>`;
+    el.innerHTML = html;
+    el.style.display = 'block';
+  }
+</script>
+</body>
+</html>

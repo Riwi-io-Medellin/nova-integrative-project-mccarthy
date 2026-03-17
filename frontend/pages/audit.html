@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auditoría — NOVA</title>
+  <link rel="icon" href="../assets/img/logo_oscuro_SF.png" type="image/png">
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <style>
+    .action-badge { display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:.75rem;font-weight:600; }
+    .CREATE_USER, .REGISTER      { background:#d1fae5;color:#065f46; }
+    .UPDATE_USER                  { background:#dbeafe;color:#1e40af; }
+    .DELETE_USER                  { background:#fee2e2;color:#991b1b; }
+    .CREATE_NOVEDAD               { background:#ede9fe;color:#5b21b6; }
+    .UPDATE_NOVEDAD_STATUS        { background:#fef3c7;color:#92400e; }
+    .DELETE_NOVEDAD               { background:#fee2e2;color:#991b1b; }
+    .LOGIN                        { background:#f3f4f6;color:#374151; }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <img src="../assets/img/logo_oscuro_SF.png" alt="Nova" id="logo-img">
+    <span>NOVA</span>
+  </div>
+  <nav class="sidebar-nav">
+    <a class="nav-link" href="novedades.html"><i class="bi bi-clipboard-check"></i><span class="nav-label">Novedades</span><span class="nav-badge" id="badge-pending" style="display:none">0</span></a>
+    <a class="nav-link" href="users.html"><i class="bi bi-people"></i><span class="nav-label">Usuarios</span><span class="nav-badge" id="badge-inactivos" style="display:none">0</span></a>
+    <div style="height:1px;background:var(--border);margin:8px 0"></div>
+    <a class="nav-link" href="config.html"><i class="bi bi-gear"></i><span class="nav-label">Configuración</span></a>
+    <a class="nav-link active" href="audit.html"><i class="bi bi-journal-text"></i><span class="nav-label">Auditoría</span></a>
+  </nav>
+  <div style="padding:12px 16px;border-top:1px solid var(--border)">
+    <div class="theme-toggle" style="margin-bottom:10px">
+      <button class="theme-btn" data-theme="light" onclick="setTheme('light')">☀️</button>
+      <button class="theme-btn" data-theme="dark"  onclick="setTheme('dark')">🌙</button>
+    </div>
+    <button class="nav-link" onclick="Auth.logout()" style="color:var(--danger)">
+      <i class="bi bi-box-arrow-right"></i><span class="nav-label">Cerrar sesión</span>
+    </button>
+  </div>
+</aside>
+
+<div class="main-layout" id="main-layout">
+  <header class="topbar">
+    <button onclick="toggleSidebar()" class="btn-icon btn-ghost"><i class="bi bi-list" style="font-size:1.2rem"></i></button>
+    <span class="topbar-title">Registro de Auditoría</span>
+    <div class="user-avatar" id="topbar-avatar"></div>
+  </header>
+  <main class="page-content">
+    <div class="card">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div style="position:relative;flex:1;min-width:120px;max-width:260px">
+          <i class="bi bi-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3)"></i>
+          <input type="text" class="form-control" id="search" placeholder="Buscar..." style="padding-left:36px" oninput="render()">
+        </div>
+        <select class="form-select" style="width:175px;min-width:175px" id="filter-entity" onchange="render()">
+          <option value="">Todas las entidades</option>
+          <option value="usuario">Usuarios</option>
+          <option value="novedad">Novedades</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="loadLogs()"><i class="bi bi-arrow-clockwise"></i></button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Fecha</th><th>Acción</th><th>Entidad</th><th>ID</th><th>Realizado por</th><th>IP</th></tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <p style="text-align:center;color:var(--text3);font-size:.8rem;margin-top:12px">El historial de auditoría se almacena en MongoDB. Requiere que MongoDB esté configurado y activo.</p>
+  </main>
+</div>
+
+<div id="toast-container"></div>
+<script src="../js/config.js"></script>
+<script src="../js/utils.js"></script>
+<script>
+  let logs = [];
+  document.addEventListener('DOMContentLoaded', () => {
+    initTheme(); initSidebar();
+    Auth.requireAdmin();
+    renderTopbarUser();
+    updateLogo();
+    loadPendingBadge();
+    loadLogs();
+  });
+
+  function updateLogo() {
+    const isDark = document.body.classList.contains('dark');
+    const logo = document.getElementById('logo-img');
+    if (logo) logo.src = isDark
+      ? '../assets/img/logo_oscuro_SF.png'
+      : '../assets/img/logo_oscuro_SF.png';
+  }
+  const _setTheme = setTheme;
+  window.setTheme = function(t) { _setTheme(t); updateLogo(); };
+
+  async function loadPendingBadge() {
+    try {
+      const r = await http.get('/novedades/stats');
+      const { data } = await r.json();
+      const badge = document.getElementById('badge-pending');
+      if (data.pending > 0) { badge.textContent = data.pending; badge.style.display = ''; }
+      else { badge.style.display = 'none'; }
+    } catch {}
+    try {
+      const r2 = await http.get('/users/stats');
+      const d2 = await r2.json();
+      const b2 = document.getElementById('badge-inactivos');
+      if (b2) { if (d2.inactivos > 0) { b2.textContent = d2.inactivos; b2.style.display = ''; } else { b2.style.display = 'none'; } }
+    } catch {}
+  }
+
+  async function loadLogs() {
+    document.getElementById('tbody').innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px"><div style="display:flex;align-items:center;justify-content:center;gap:10px;color:var(--text3)"><div class="spinner"></div>Cargando auditoría...</div></td></tr>`;
+    try {
+      const r = await http.get('/audit');
+      if (!r.ok) throw new Error((await r.json()).error || 'No disponible');
+      logs = await r.json();
+      render();
+    } catch(err) {
+      document.getElementById('tbody').innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text3)">${err.message === 'No disponible' || err.message.includes('MongoDB') ? 'MongoDB no está conectado. Configura MONGO_URI en el .env para ver el historial.' : err.message}</td></tr>`;
+    }
+  }
+
+  function render() {
+    const q = document.getElementById('search').value.toLowerCase();
+    const entity = document.getElementById('filter-entity').value;
+    const rows = logs.filter(l => {
+      if (entity && l.entity !== entity) return false;
+      if (q && !JSON.stringify(l).toLowerCase().includes(q)) return false;
+      return true;
+    });
+    if (!rows.length) { document.getElementById('tbody').innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text3)">Sin registros</td></tr>`; return; }
+    document.getElementById('tbody').innerHTML = rows.map(l => `
+      <tr>
+        <td style="font-size:.8rem;color:var(--text3);white-space:nowrap">${fmt.time(l.timestamp)}</td>
+        <td><span class="action-badge ${l.action}">${l.action}</span></td>
+        <td style="text-transform:capitalize">${l.entity}</td>
+        <td style="font-size:.8rem;color:var(--text3)">${l.entityId||'—'}</td>
+        <td style="font-size:.85rem">${l.performedBy?.nombre||'—'}<div style="font-size:.75rem;color:var(--text3)">${l.performedBy?.correo||''}</div></td>
+        <td style="font-size:.78rem;color:var(--text3)">${l.ip||'—'}</td>
+      </tr>`).join('');
+  }
+</script>
+</body>
+</html>

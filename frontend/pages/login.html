@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — NOVA</title>
+  <link rel="icon" href="../assets/img/logo_oscuro_SF.png" type="image/png">
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <style>
+    /* ── Página de login ─────────────────────────────── */
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+
+    .login-wrap {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 100vh;
+      width: 100%;
+    }
+
+    .login-hero {
+      background: var(--grad-primary);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 48px;
+      gap: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .login-hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='20'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .hero-logo { position: relative; z-index: 1; }
+    .hero-logo img { height: 300px; filter: brightness(0) invert(1); margin-bottom:-80px; margin-top: -80px;}
+    .hero-title { position: relative; z-index:1; text-align: center; }
+    .hero-title h1 { color: #fff; font-size: 2rem; margin-bottom: 8px; }
+    .hero-title p  { color: rgba(255,255,255,.75); font-size: 1rem; }
+    .hero-features { position: relative; z-index:1; display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 320px; }
+    .hero-feat { display: flex; align-items: center; gap: 12px; color: rgba(255,255,255,.9); font-size: .9rem; }
+    .hero-feat i { width: 36px; height: 36px; background: rgba(255,255,255,.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+
+    .login-form-side {
+      display: flex; align-items: center; justify-content: center;
+      padding: 48px;
+      background: var(--bg);
+    }
+    .login-box {
+      width: 100%; max-width: 400px;
+    }
+    .login-header { margin-bottom: 32px; }
+    .login-header h2 { font-size: 1.6rem; margin-bottom: 6px; }
+    .login-header p { color: var(--text3); font-size: .9rem; }
+
+    .login-form .form-group { margin-bottom: 18px; }
+    .input-icon { position: relative; }
+    .input-icon > i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 1rem; pointer-events: none; }
+    .input-icon .form-control { padding-left: 40px; }
+
+    /* Eliminar ojo nativo del navegador (Chrome, Edge, IE) */
+    input[type="password"]::-ms-reveal,
+    input[type="password"]::-ms-clear,
+    input[type="password"]::-webkit-credentials-auto-fill-button { display: none !important; }
+    input[type="password"] { -webkit-appearance: none; }
+
+    /* Wrapper solo para campos de contraseña */
+    .pw-wrap { position: relative; }
+    .pw-wrap .toggle-pw {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      cursor: pointer; color: var(--text3); background: none; border: none;
+      font-size: 1rem; padding: 4px; line-height: 1;
+      transition: opacity 0.15s ease;
+    }
+    .pw-wrap .toggle-pw:hover { color: var(--primary); }
+
+    .login-footer-link { font-size: .85rem; color: var(--text3); text-align: center; margin-top: 20px; }
+    .login-footer-link a { color: var(--primary); font-weight: 600; }
+
+    /* ── Register / Forgot panels ───────────────────── */
+    #panel-register, #panel-forgot { display: none; }
+
+    /* ── Theme toggle on login ──────────────────────── */
+    .login-theme {
+      position: fixed; top: 16px; right: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .login-wrap { grid-template-columns: 1fr; }
+      .login-hero { display: none; }
+      .login-form-side { padding: 32px 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-theme">
+    <div class="theme-toggle">
+      <button class="theme-btn" id="btnLight" data-theme="light" onclick="setTheme('light')">&#9728;</button>
+      <button class="theme-btn" id="btnDark"  data-theme="dark"  onclick="setTheme('dark')">&#9790;</button>
+    </div>
+  </div>
+
+  <div class="login-wrap">
+    <!-- Hero side -->
+    <div class="login-hero">
+      <div class="hero-logo">
+        <img src="../assets/img/logo_claro_SF.png" alt="Nova Logo">
+      </div>
+      <div class="hero-title">
+        <h1>Bienvenido a NOVA</h1>
+        <p>Sistema de gestión de novedades y reportes</p>
+      </div>
+      <div class="hero-features">
+        <div class="hero-feat"><i class="bi bi-clipboard-check"></i>Gestiona novedades y ausencias</div>
+        <div class="hero-feat"><i class="bi bi-people"></i>Administra tu equipo</div>
+        <div class="hero-feat"><i class="bi bi-robot"></i>Análisis con inteligencia artificial</div>
+        <div class="hero-feat"><i class="bi bi-bell"></i>Notificaciones por correo automáticas</div>
+      </div>
+    </div>
+
+    <!-- Form side -->
+    <div class="login-form-side">
+      <div class="login-box">
+
+        <!-- LOGIN -->
+        <div id="panel-login">
+          <div class="login-header">
+            <h2>Iniciar sesión</h2>
+            <p>Ingresa tus credenciales para continuar</p>
+          </div>
+          <div class="login-form">
+            <div class="form-group">
+              <label class="form-label">Correo electrónico</label>
+              <div class="input-icon">
+                <i class="bi bi-envelope"></i>
+                <input type="email" class="form-control" id="login-correo" placeholder="tu@correo.com">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Contraseña</label>
+              <div class="pw-wrap">
+                <input type="password" class="form-control" id="login-password" placeholder="••••••••" style="padding-right:42px">
+                <button class="toggle-pw" tabindex="-1" style="opacity:0;pointer-events:none"><i class="bi bi-eye"></i></button>
+              </div>
+            </div>
+            <div id="login-error" style="color:var(--danger);font-size:.85rem;margin-bottom:12px;display:none"></div>
+            <button class="btn btn-primary" style="width:100%;justify-content:center" id="btn-login" onclick="doLogin(event)">
+              <span id="login-text">Iniciar sesión</span>
+              <span id="login-spinner" class="spinner" style="display:none;width:16px;height:16px;border-width:2px;border-color:rgba(255,255,255,.4);border-top-color:#fff"></span>
+            </button>
+          </div>
+          <div class="login-footer-link" style="margin-top:12px">
+            <a href="#" onclick="showPanel('forgot')" style="color:var(--text3);font-size:.82rem">¿Olvidaste tu contraseña?</a>
+          </div>
+          <div class="login-footer-link">¿No tienes cuenta? <a href="#" onclick="showPanel('register')">Regístrate</a></div>
+        </div>
+
+        <!-- RECUPERAR CONTRASEÑA -->
+        <div id="panel-forgot" style="display:none">
+          <div class="login-header">
+            <a href="#" onclick="showPanel('login')" style="display:flex;align-items:center;gap:6px;color:var(--text3);font-size:.85rem;margin-bottom:16px">
+              <i class="bi bi-arrow-left"></i> Volver al login
+            </a>
+            <h2>Recuperar contraseña</h2>
+            <p>Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.</p>
+          </div>
+          <div class="login-form">
+            <div class="form-group">
+              <label class="form-label">Correo electrónico</label>
+              <div class="input-icon">
+                <i class="bi bi-envelope"></i>
+                <input type="email" class="form-control" id="forgot-correo" placeholder="tu@correo.com">
+              </div>
+            </div>
+            <div id="forgot-error"   style="color:var(--danger);font-size:.85rem;margin-bottom:10px;display:none"></div>
+            <div id="forgot-success" style="color:var(--success,#065f46);background:#d1fae5;border-radius:8px;padding:12px;font-size:.85rem;margin-bottom:10px;display:none"></div>
+            <button class="btn btn-primary" style="width:100%;justify-content:center" id="btn-forgot" onclick="doForgot()">
+              <span id="forgot-text">Enviar enlace</span>
+              <span id="forgot-spinner" class="spinner" style="display:none;width:16px;height:16px;border-width:2px;border-color:rgba(255,255,255,.4);border-top-color:#fff"></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- REGISTER -->
+        <div id="panel-register" style="display:none">
+          <div class="login-header">
+            <a href="#" onclick="showPanel('login')" style="display:flex;align-items:center;gap:6px;color:var(--text3);font-size:.85rem;margin-bottom:16px">
+              <i class="bi bi-arrow-left"></i> Volver al login
+            </a>
+            <h2>Crear cuenta</h2>
+            <p>Completa el formulario para registrarte</p>
+          </div>
+          <div class="login-form">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="form-group">
+                <label class="form-label">Nombres</label>
+                <input type="text" class="form-control" id="reg-nombre" placeholder="Juan">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Apellidos</label>
+                <input type="text" class="form-control" id="reg-apellido" placeholder="García">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Documento</label>
+              <input type="text" class="form-control" id="reg-documento" placeholder="1234567890">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Correo electrónico</label>
+              <input type="email" class="form-control" id="reg-correo" placeholder="tu@correo.com">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Teléfono (opcional)</label>
+              <input type="tel" class="form-control" id="reg-telefono" placeholder="3001234567">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Contraseña</label>
+              <div class="pw-wrap">
+                <input type="password" class="form-control" id="reg-password" placeholder="Mínimo 6 caracteres" style="padding-right:42px">
+                <button class="toggle-pw" tabindex="-1" style="opacity:0;pointer-events:none"><i class="bi bi-eye"></i></button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirmar contraseña</label>
+              <div class="pw-wrap">
+                <input type="password" class="form-control" id="reg-confirm" placeholder="Repite tu contraseña" style="padding-right:42px">
+                <button class="toggle-pw" tabindex="-1" style="opacity:0;pointer-events:none"><i class="bi bi-eye"></i></button>
+              </div>
+            </div>
+            <div id="reg-error" style="color:var(--danger);font-size:.85rem;margin-bottom:12px;display:none"></div>
+            <button class="btn btn-primary" style="width:100%;justify-content:center" id="btn-reg" onclick="doRegister(event)">
+              <span id="reg-text">Crear cuenta</span>
+              <span id="reg-spinner" class="spinner" style="display:none;width:16px;height:16px;border-width:2px;border-color:rgba(255,255,255,.4);border-top-color:#fff"></span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <script>
+    const API = (window.NOVA_API_URL || '') + '/api';
+
+    // -- Tema
+    ;(function(){
+      const t = localStorage.getItem('nova_theme') || 'light';
+      document.body.classList.add(t, 'ready');
+      document.querySelectorAll('[data-theme]').forEach(b =>
+        b.classList.toggle('active', b.dataset.theme === t));
+    })();
+    function setTheme(t) {
+      const current = document.body.classList.contains('dark') ? 'dark' : 'light';
+      if (t === current) t = t === 'dark' ? 'light' : 'dark';
+      document.body.classList.remove('light','dark');
+      document.body.classList.add(t);
+      localStorage.setItem('nova_theme', t);
+      document.querySelectorAll('[data-theme]').forEach(b =>
+        b.classList.toggle('active', b.dataset.theme === t));
+    }
+
+    // ── Panels ─────────────────────────────────
+    function showPanel(p) {
+      document.getElementById('panel-login').style.display    = p === 'login'    ? 'block' : 'none';
+      document.getElementById('panel-register').style.display = p === 'register' ? 'block' : 'none';
+      document.getElementById('panel-forgot').style.display   = p === 'forgot'   ? 'block' : 'none';
+    }
+
+    // ── Toggle contraseña (ojo aparece solo al escribir) ──
+    function initPwToggle(inputId) {
+      const inp = document.getElementById(inputId);
+      if (!inp) return;
+      const wrap = inp.closest('.pw-wrap');
+      const btn  = wrap ? wrap.querySelector('.toggle-pw') : null;
+      if (!btn) return;
+
+      // Solo mostrar el botón cuando hay texto
+      inp.addEventListener('input', () => {
+        btn.style.opacity = inp.value.length > 0 ? '1' : '0';
+        btn.style.pointerEvents = inp.value.length > 0 ? 'auto' : 'none';
+      });
+
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const show = inp.type === 'password';
+        inp.type = show ? 'text' : 'password';
+        btn.querySelector('i').className = `bi bi-eye${show ? '-slash' : ''}`;
+      });
+    }
+
+    // ── Login ──────────────────────────────────
+    async function doLogin(e) {
+      if (e) e.preventDefault();
+
+      const correo   = document.getElementById('login-correo').value.trim();
+      const password = document.getElementById('login-password').value;
+      const errEl    = document.getElementById('login-error');
+      errEl.style.display = 'none';
+
+      if (!correo || !password) { showErr(errEl, 'Completa todos los campos'); return; }
+
+      const btn = document.getElementById('btn-login');
+      btn.disabled = true;
+      document.getElementById('login-text').style.display    = 'none';
+      document.getElementById('login-spinner').style.display = 'inline-block';
+
+      try {
+        const res  = await fetch(`${API}/auth/login`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ correo, password })
+        });
+
+        let data = {};
+        try { data = await res.json(); } catch(_) {}
+
+        if (!res.ok) {
+          showErr(errEl, data.error || `Error ${res.status}: autenticación fallida`);
+          btn.disabled = false;
+          document.getElementById('login-text').style.display    = 'inline';
+          document.getElementById('login-spinner').style.display = 'none';
+          return;
+        }
+
+        localStorage.setItem('nova_token', data.token);
+        localStorage.setItem('nova_user',  JSON.stringify(data.user));
+
+        // Mostrar éxito brevemente antes de redirigir
+        showToast('¡Bienvenido ' + (data.user.nombre || '') + '!', 'success');
+
+        // Redirigir según rol
+        const role = (data.user.role || '').toLowerCase();
+        const dest = ['administrador', 'admin'].includes(role)
+          ? '/pages/novedades.html'
+          : '/pages/user.html';
+
+        setTimeout(() => { window.location.href = dest; }, 600);
+
+      } catch (err) {
+        showErr(errEl, 'No se pudo conectar con el servidor. ¿Está corriendo el backend?');
+        btn.disabled = false;
+        document.getElementById('login-text').style.display    = 'inline';
+        document.getElementById('login-spinner').style.display = 'none';
+      }
+    }
+
+    // ── Register ───────────────────────────────
+    async function doRegister(e) {
+      if (e) e.preventDefault();
+
+      const errEl = document.getElementById('reg-error');
+      errEl.style.display = 'none';
+
+      const body = {
+        nombre:    document.getElementById('reg-nombre').value.trim(),
+        apellido:  document.getElementById('reg-apellido').value.trim(),
+        documento: document.getElementById('reg-documento').value.trim(),
+        correo:    document.getElementById('reg-correo').value.trim(),
+        telefono:  document.getElementById('reg-telefono').value.trim(),
+        password:  document.getElementById('reg-password').value,
+      };
+      const confirm = document.getElementById('reg-confirm').value;
+
+      for (const [k, v] of Object.entries(body))
+        if (!v && k !== 'telefono') { showErr(errEl, `El campo '${k}' es requerido`); return; }
+      if (body.password !== confirm) { showErr(errEl, 'Las contraseñas no coinciden'); return; }
+      if (body.password.length < 6)  { showErr(errEl, 'La contraseña debe tener al menos 6 caracteres'); return; }
+
+      const btn = document.getElementById('btn-reg');
+      btn.disabled = true;
+      document.getElementById('reg-text').style.display    = 'none';
+      document.getElementById('reg-spinner').style.display = 'inline-block';
+
+      try {
+        const res  = await fetch(`${API}/auth/register`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(body)
+        });
+
+        let data = {};
+        try { data = await res.json(); } catch(_) {}
+
+        if (!res.ok) {
+          showErr(errEl, data.error || `Error ${res.status} al registrar`);
+          return;
+        }
+
+        showToast(data.message || '¡Cuenta creada! Un administrador debe activarla.', 'success');
+        setTimeout(() => showPanel('login'), 1200);
+
+      } catch (err) {
+        showErr(errEl, 'No se pudo conectar con el servidor');
+      } finally {
+        btn.disabled = false;
+        document.getElementById('reg-text').style.display    = 'inline';
+        document.getElementById('reg-spinner').style.display = 'none';
+      }
+    }
+
+    // ── Forgot Password ────────────────────────
+    async function doForgot() {
+      const correo  = document.getElementById('forgot-correo').value.trim();
+      const errEl   = document.getElementById('forgot-error');
+      const succEl  = document.getElementById('forgot-success');
+      errEl.style.display  = 'none';
+      succEl.style.display = 'none';
+
+      if (!correo) { errEl.textContent = 'Ingresa tu correo'; errEl.style.display=''; return; }
+
+      const btn = document.getElementById('btn-forgot');
+      btn.disabled = true;
+      document.getElementById('forgot-text').style.display    = 'none';
+      document.getElementById('forgot-spinner').style.display = 'inline-block';
+
+      try {
+        const r    = await fetch(`${API}/auth/forgot-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ correo })
+        });
+        const data = await r.json();
+        if (!r.ok) { errEl.textContent = data.error || 'Error'; errEl.style.display=''; }
+        else { succEl.textContent = data.message; succEl.style.display=''; }
+      } catch { errEl.textContent = 'Error de conexión'; errEl.style.display=''; }
+      finally {
+        btn.disabled = false;
+        document.getElementById('forgot-text').style.display    = 'inline';
+        document.getElementById('forgot-spinner').style.display = 'none';
+      }
+    }
+
+    // ── Helpers ────────────────────────────────
+    function showErr(el, msg) { el.textContent = msg; el.style.display = 'block'; }
+
+    function showToast(msg, type = 'info') {
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      const icons = { success: '', error: '', warning: '', info: '' };
+      el.innerHTML = msg;
+      document.getElementById('toast-container').appendChild(el);
+      setTimeout(() => { el.classList.add('removing'); setTimeout(() => el.remove(), 250); }, 3500);
+    }
+
+    // -- Init
+    document.addEventListener('DOMContentLoaded', () => {
+      initPwToggle('login-password');
+      initPwToggle('reg-password');
+      initPwToggle('reg-confirm');
+      document.getElementById('login-correo').addEventListener('keydown',   e => { if (e.key === 'Enter') doLogin(e); });
+      document.getElementById('login-password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(e); });
+    });
+  </script>
+</body>
+</html>
